@@ -14,7 +14,7 @@ spring:
     # 中间件可用 docker compose up -d 一键拉起（见 docker-compose.yml）
     url: jdbc:mysql://localhost:3306/warranty_pro?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: root123456
+    password: "1234"
 
   data:
     redis:
