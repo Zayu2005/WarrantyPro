@@ -30,8 +30,14 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'orders',
         name: 'orders',
-        component: () => import('@/views/PlaceholderView.vue'),
-        meta: { title: '工单池', requiresAuth: true, hint: '工单受理 · 保修判定复核 · 派单确认 · 催办 —— 迭代 2 排期开发' },
+        component: () => import('@/views/OrdersPoolView.vue'),
+        meta: { title: '工单池', requiresAuth: true },
+      },
+      {
+        path: 'schedule',
+        name: 'schedule',
+        component: () => import('@/views/ScheduleView.vue'),
+        meta: { title: '师傅排班', requiresAuth: true },
       },
       {
         path: 'warranty-ledger',

@@ -123,7 +123,7 @@ export struct HomePage {
             .width('100%')
 
           Row({ space: 10 }) {
-            Text(this.isOwner() ? `进行中 ${this.ongoingCount()} 单` : `待接 ${this.todoCount()} 单`)
+            Text(this.isOwner() ? `进行中 ${this.ongoingCount()} 单` : `待上门 ${this.todoCount()} 单`)
               .fontSize(13)
               .fontColor(Color.White)
               .backgroundColor('rgba(255,255,255,0.12)')

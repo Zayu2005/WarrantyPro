@@ -220,3 +220,32 @@ export async function createOrder(token: string, category: string, houseId: numb
   body.urgency = urgency;
   return JSON.parse(await postJSON('/api/v1/orders', body, token)) as OrderCreateResult;
 }
+
+class EmptyBody {
+}
+
+/** 师傅到场打卡（POST /api/v1/worker/orders/{id}/arrive）。 */
+export async function arriveOrder(token: string, orderId: number): Promise<ApiResult> {
+  return JSON.parse(await postJSON(`/api/v1/worker/orders/${orderId}/arrive`, new EmptyBody(), token)) as ApiResult;
+}
+
+class CompleteOrderBody {
+  faultCause: string = '';
+  measures: string = '';
+  workHours: number = 0;
+}
+
+export class WorkerActionResult {
+  code: number = -1;
+  message: string = '';
+}
+
+/** 师傅完工提交（POST /api/v1/worker/orders/{id}/complete）。 */
+export async function completeOrder(token: string, orderId: number,
+  faultCause: string, measures: string, workHours: number): Promise<WorkerActionResult> {
+  const body: CompleteOrderBody = new CompleteOrderBody();
+  body.faultCause = faultCause;
+  body.measures = measures;
+  body.workHours = workHours;
+  return JSON.parse(await postJSON(`/api/v1/worker/orders/${orderId}/complete`, body, token)) as WorkerActionResult;
+}

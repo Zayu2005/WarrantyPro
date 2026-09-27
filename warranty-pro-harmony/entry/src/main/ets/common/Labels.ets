@@ -9,7 +9,7 @@ export function statusLabel(status: string): string {
     case 'EXTERNAL_PROCESSING':
       return '物业跟进中';
     case 'DISPATCHED':
-      return '待接单';
+      return '已派单·待上门';
     case 'IN_PROGRESS':
       return '维修中';
     case 'PENDING_CONFIRM':

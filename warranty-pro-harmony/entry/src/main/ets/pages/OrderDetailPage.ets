@@ -1,16 +1,19 @@
 import { promptAction, router } from '@kit.ArkUI';
-import { fetchOrderDetail, OrderItem, FlowItem } from '../common/ApiClient';
+import { arriveOrder, completeOrder, fetchOrderDetail, OrderItem, FlowItem } from '../common/ApiClient';
 import { statusLabel, statusColor, categoryLabel, verdictText, actionLabel } from '../common/Labels';
 
 /**
  * 工单详情：状态头部 + 保修判定卡 + 流转时间轴（docs/02 FR-O-04）。
+ * 师傅角色在详情内直接操作：待上门 → 到场打卡；维修中 → 完工提交。
  */
 @Entry
 @Component
 struct OrderDetailPage {
   @State order: OrderItem = new OrderItem();
   @State loaded: boolean = false;
+  @State actionLoading: boolean = false;
   private orderId: number = 0;
+  private role: string = (AppStorage.get<string>('role') ?? 'OWNER');
 
   private readonly C_INK: string = '#103B3A';
   private readonly C_MOSS: string = '#2E6D67';
@@ -42,6 +45,60 @@ struct OrderDetailPage {
       }
     } catch (err) {
       promptAction.showToast({ message: '加载失败，请检查网络' });
+    }
+  }
+
+  private async onArrive(): Promise<void> {
+    if (this.actionLoading) {
+      return;
+    }
+    this.actionLoading = true;
+    try {
+      const token = AppStorage.get<string>('accessToken') ?? '';
+      const result = await arriveOrder(token, this.orderId);
+      if (result.code !== 0) {
+        promptAction.showToast({ message: result.message === '' ? '打卡失败，请稍后再试' : result.message });
+        return;
+      }
+      promptAction.showToast({ message: '已确认到场，开工顺利' });
+      await this.loadData();
+    } catch (err) {
+      promptAction.showToast({ message: '连接不上服务，请检查网络' });
+    } finally {
+      this.actionLoading = false;
+    }
+  }
+
+  /** 师傅操作区：待上门 → 到场打卡；维修中 → 完工提交。 */
+  @Builder
+  WorkerActions() {
+    if (this.role === 'WORKER' && this.order.status === 'DISPATCHED') {
+      Button(this.actionLoading ? '正在打卡' : '到场打卡')
+        .width('100%')
+        .height(48)
+        .borderRadius(24)
+        .backgroundColor(this.C_MOSS)
+        .fontColor(Color.White)
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .margin({ top: 14 })
+        .enabled(!this.actionLoading)
+        .onClick(() => {
+          this.onArrive();
+        })
+    } else if (this.role === 'WORKER' && this.order.status === 'IN_PROGRESS') {
+      Button('完工提交')
+        .width('100%')
+        .height(48)
+        .borderRadius(24)
+        .backgroundColor(this.C_AMBER)
+        .fontColor(Color.White)
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .margin({ top: 14 })
+        .onClick(() => {
+          router.pushUrl({ url: 'pages/WorkerCompletePage', params: { orderId: this.order.id } as CompleteParams });
+        })
     }
   }
 
@@ -154,6 +211,8 @@ struct OrderDetailPage {
             .borderRadius(14)
             .backgroundColor(statusColor(this.order.status) === '#8A968F' ? this.C_INK : this.C_INK)
 
+            this.WorkerActions()
+
             // ---- 保修判定卡 ----
             Column({ space: 8 }) {
               Text('保修判定')
@@ -222,5 +281,9 @@ struct OrderDetailPage {
 }
 
 class OrderDetailParams {
+  orderId: number = 0;
+}
+
+class CompleteParams {
   orderId: number = 0;
 }

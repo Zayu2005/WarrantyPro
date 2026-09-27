@@ -3,6 +3,7 @@
     "pages/LoginPage",
     "pages/MainPage",
     "pages/OrderDetailPage",
+    "pages/WorkerCompletePage",
     "pages/RepairFormPage",
     "pages/Index"
   ]
