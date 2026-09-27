@@ -1,6 +1,8 @@
 {
   "src": [
     "pages/LoginPage",
+    "pages/WorkbenchPage",
+    "pages/RepairFormPage",
     "pages/Index"
   ]
 }

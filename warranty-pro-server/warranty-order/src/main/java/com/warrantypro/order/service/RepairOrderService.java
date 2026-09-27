@@ -145,11 +145,24 @@ public class RepairOrderService {
         return toVO(order, true);
     }
 
+    // ==================== 师傅端 ====================
+
+    /** 师傅待办：派给我且未完结的工单（待接单 + 维修中），docs/02 FR-W-02。 */
+    public PageResult<OrderVO> workerOrders(LoginUser worker, long page, long pageSize) {
+        Page<RepairOrder> result = repairOrderMapper.selectPage(new Page<>(page, pageSize),
+                new LambdaQueryWrapper<RepairOrder>()
+                        .eq(RepairOrder::getCurrentWorkerId, worker.userId())
+                        .in(RepairOrder::getStatus,
+                                OrderStatus.DISPATCHED.name(), OrderStatus.IN_PROGRESS.name())
+                        .orderByDesc(RepairOrder::getId));
+        return PageResult.of(result.getRecords().stream().map(o -> toVO(o, false)).toList(),
+                result.getTotal(), page, pageSize);
+    }
+
     // ==================== 客服调度端 ====================
 
     public PageResult<OrderVO> dispatchPool(String status, String category, Long communityId,
-                                            long page, long pageSize) {
-        Page<RepairOrder> result = repairOrderMapper.selectPage(new Page<>(page, pageSize),
+                                            long page, long pageSize) {        Page<RepairOrder> result = repairOrderMapper.selectPage(new Page<>(page, pageSize),
                 new LambdaQueryWrapper<RepairOrder>()
                         .eq(status != null && !status.isBlank(), RepairOrder::getStatus, status)
                         .eq(category != null && !category.isBlank(), RepairOrder::getCategory, category)

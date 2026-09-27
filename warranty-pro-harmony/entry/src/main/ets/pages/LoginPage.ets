@@ -1,3 +1,4 @@
+import { router } from '@kit.ArkUI';
 import { preferences } from '@kit.ArkData';
 import { loginByPassword, LoginData } from '../common/ApiClient';
 
@@ -13,8 +14,6 @@ struct LoginPage {
   @State password: string = '';
   @State remember: boolean = true;
   @State loading: boolean = false;
-  @State loggedInName: string = '';
-  @State loggedInRole: string = '';
   @State pulse: number = 1;
 
   private readonly C_INK: string = '#103B3A';    // 松青 · 主色
@@ -101,10 +100,16 @@ struct LoginPage {
         await store.delete('saved_username');
       }
       await store.flush();
-      const role: string = result.data.user.roles.length > 0 ? result.data.user.roles[0] : '';
-      this.loggedInName = result.data.user.realName;
-      this.loggedInRole = this.roleLabel(role);
-      this.toast('登录成功');
+
+      // 会话放入全局状态，按角色进入对应工作台
+      AppStorage.setOrCreate('accessToken', result.data.accessToken);
+      AppStorage.setOrCreate('realName', result.data.user.realName);
+      let role: string = 'OWNER';
+      if (result.data.user.roles.length > 0) {
+        role = result.data.user.roles[0];
+      }
+      AppStorage.setOrCreate('role', role);
+      router.replaceUrl({ url: 'pages/WorkbenchPage' });
     } catch (err) {
       this.toast('连接不上服务：请确认与电脑在同一 Wi-Fi，且 ApiClient.ets 里的 BASE_URL 正确');
     } finally {
@@ -246,36 +251,7 @@ struct LoginPage {
 
         // ---- 表单卡 ----
         Column() {
-          if (this.loggedInName !== '') {
-            Column({ space: 14 }) {
-              Stack() {
-                Row()
-                  .width(52)
-                  .height(52)
-                  .borderRadius(26)
-                  .backgroundColor(this.C_MOSS)
-                  .opacity(0.15)
-                Text('✓')
-                  .fontSize(24)
-                  .fontColor(this.C_MOSS)
-                  .fontWeight(FontWeight.Bold)
-              }
-              Text('登录成功')
-                .fontSize(18)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(this.C_INK)
-              Text(`${this.loggedInName} · ${this.loggedInRole}`)
-                .fontSize(14)
-                .fontColor(this.C_MOSS)
-              Text('工作台页面开发中，登录凭证已保存在本机')
-                .fontSize(12)
-                .fontColor(this.C_MUTED)
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Center)
-            .padding({ top: 12, bottom: 12 })
-          } else {
-            Text('账 号 登 录')
+          Text('账 号 登 录')
               .fontSize(12)
               .fontColor(this.C_MOSS)
               .letterSpacing(3)
@@ -354,7 +330,6 @@ struct LoginPage {
               .onClick(() => {
                 this.onLogin();
               })
-          }
         }
         .width('100%')
         .padding(22)
