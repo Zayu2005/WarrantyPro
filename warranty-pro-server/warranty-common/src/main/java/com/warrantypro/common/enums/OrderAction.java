@@ -16,6 +16,7 @@ public enum OrderAction {
     CONFIRM("验收通过"),
     REJECT_CONFIRM("验收不通过（返工）"),
     URGE("催办"),
+    EXTERNAL_FOLLOWUP("外部处理进展跟进（保修期内工单）"),
     CLOSE("关单"),
     CANCEL("取消");
 
