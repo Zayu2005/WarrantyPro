@@ -18,8 +18,8 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function login(phone: string, password: string) {
-    const result = await loginApi({ phone, password })
+  async function login(username: string, password: string) {
+    const result = await loginApi({ username, password })
     setToken(result.accessToken)
     userInfo.value = result.user
   }

@@ -1,13 +1,14 @@
 import request from './request'
 
 export interface LoginPayload {
-  phone: string
+  username: string
   password: string
 }
 
 export interface UserInfo {
   id: number
-  phone: string
+  username: string
+  phone: string | null
   realName: string
   roles: string[]
 }

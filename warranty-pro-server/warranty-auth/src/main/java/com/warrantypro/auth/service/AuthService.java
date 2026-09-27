@@ -34,10 +34,10 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getPhone, request.phone()));
+                .eq(SysUser::getUsername, request.username()));
         if (user == null || user.getPasswordHash() == null
                 || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BizException(ErrorCode.UNAUTHORIZED, "手机号或密码错误");
+            throw new BizException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
             throw new BizException(ErrorCode.FORBIDDEN, "账号已停用，请联系管理员");
@@ -65,12 +65,13 @@ public class AuthService {
     }
 
     public UserInfoVO me(LoginUser user) {
-        // JWT 只携带 ID 与角色，手机号/姓名回库取最新值
+        // JWT 只携带 ID 与角色，用户名/姓名回库取最新值
         SysUser dbUser = sysUserMapper.selectById(user.userId());
         if (dbUser == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED, "用户不存在");
         }
-        return new UserInfoVO(dbUser.getId(), dbUser.getPhone(), dbUser.getRealName(), user.roles());
+        return new UserInfoVO(dbUser.getId(), dbUser.getUsername(), dbUser.getPhone(),
+                dbUser.getRealName(), user.roles());
     }
 
     private LoginResponse issueTokens(SysUser user, boolean rotate) {
@@ -81,7 +82,7 @@ public class AuthService {
             user.setLastLoginAt(LocalDateTime.now());
             sysUserMapper.updateById(user);
         }
-        return new LoginResponse(access, refresh,
-                new UserInfoVO(user.getId(), user.getPhone(), user.getRealName(), roles));
+        return new LoginResponse(access, refresh, new UserInfoVO(user.getId(), user.getUsername(),
+                user.getPhone(), user.getRealName(), roles));
     }
 }

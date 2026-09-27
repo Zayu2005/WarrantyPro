@@ -21,7 +21,8 @@ USE warranty_pro;
 
 CREATE TABLE sys_user (
   id            BIGINT UNSIGNED AUTO_INCREMENT COMMENT '主键',
-  phone         VARCHAR(20)  NOT NULL COMMENT '手机号（全角色统一登录账号）',
+  username      VARCHAR(50)  NOT NULL COMMENT '用户名（登录账号，全角色统一）',
+  phone         VARCHAR(20)  NULL COMMENT '手机号（联系方式，非登录账号）',
   password_hash VARCHAR(100) NULL COMMENT 'BCrypt 哈希（验证码登录用户可空）',
   real_name     VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '姓名',
   avatar        VARCHAR(255) NULL COMMENT '头像 URL',
@@ -31,6 +32,7 @@ CREATE TABLE sys_user (
   created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
+  UNIQUE KEY uk_username (username),
   UNIQUE KEY uk_phone (phone)
 ) ENGINE = InnoDB COMMENT = '用户表';
 

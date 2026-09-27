@@ -15,6 +15,10 @@ public class SysUser {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    /** 登录账号 */
+    private String username;
+
+    /** 联系方式（非登录账号） */
     private String phone;
 
     private String passwordHash;

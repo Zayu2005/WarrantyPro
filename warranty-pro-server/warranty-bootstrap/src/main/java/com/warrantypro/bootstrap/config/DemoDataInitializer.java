@@ -32,10 +32,10 @@ import java.time.LocalDate;
  *
  * <p>演示账号（密码统一 123456，仅限本地/演示环境）：</p>
  * <ul>
- *   <li>13800000001 超级管理员（ADMIN）</li>
- *   <li>13800000002 客服小王（DISPATCHER）</li>
- *   <li>13800000003 张建国师傅（WORKER）</li>
- *   <li>13800000004 李雷（OWNER，已绑定 3 栋 1 单元 101）</li>
+ *   <li>admin   系统管理员（ADMIN）</li>
+ *   <li>kefu    客服小王（DISPATCHER）</li>
+ *   <li>shifu   张建国师傅（WORKER）</li>
+ *   <li>owner   李雷（OWNER，已绑定 3 栋 1 单元 101）</li>
  * </ul>
  */
 @Slf4j
@@ -56,7 +56,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getPhone, "13800000001")) > 0) {
+                .eq(SysUser::getUsername, "admin")) > 0) {
             return;
         }
 
@@ -95,10 +95,10 @@ public class DemoDataInitializer implements CommandLineRunner {
         facilityMapper.insert(elevator);
 
         // 账号
-        Long admin = createUser("13800000001", "系统管理员", "ADMIN");
-        createUser("13800000002", "客服小王", "DISPATCHER");
-        createUser("13800000003", "张建国", "WORKER");
-        Long owner = createUser("13800000004", "李雷", "OWNER");
+        Long admin = createUser("admin", "13800000001", "系统管理员", "ADMIN");
+        createUser("kefu", "13800000002", "客服小王", "DISPATCHER");
+        createUser("shifu", "13800000003", "张建国", "WORKER");
+        Long owner = createUser("owner", "13800000004", "李雷", "OWNER");
 
         // 业主绑定房屋（直接审核通过）
         UserHouse userHouse = new UserHouse();
@@ -112,8 +112,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         log.info("演示数据初始化完成：4 个账号（密码 123456）、小区/楼栋/房屋/电梯台账");
     }
 
-    private Long createUser(String phone, String realName, String roleCode) {
+    private Long createUser(String username, String phone, String realName, String roleCode) {
         SysUser user = new SysUser();
+        user.setUsername(username);
         user.setPhone(phone);
         user.setPasswordHash(passwordEncoder.encode("123456"));
         user.setRealName(realName);

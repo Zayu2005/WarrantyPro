@@ -11,10 +11,10 @@ const userStore = useUserStore()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
-const form = reactive({ phone: '', password: '' })
+const form = reactive({ username: '', password: '' })
 
 const rules: FormRules = {
-  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
@@ -23,7 +23,7 @@ async function onLogin() {
   if (!valid) return
   loading.value = true
   try {
-    await userStore.login(form.phone, form.password)
+    await userStore.login(form.username, form.password)
     const redirect = (route.query.redirect as string | undefined) ?? '/dashboard'
     router.push(redirect)
   } catch (e) {
@@ -40,8 +40,8 @@ async function onLogin() {
       <h2 class="login-title">WarrantyPro</h2>
       <p class="login-subtitle">数字化物业保修平台 · 管理后台</p>
       <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="onLogin">
-        <el-form-item prop="phone">
-          <el-input v-model="form.phone" placeholder="手机号" maxlength="11" />
+        <el-form-item prop="username">
+          <el-input v-model="form.username" placeholder="用户名" maxlength="50" />
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" show-password />
