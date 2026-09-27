@@ -8,6 +8,7 @@ import com.warrantypro.order.dto.OrderCreateResponse;
 import com.warrantypro.order.dto.OrderVO;
 import com.warrantypro.order.service.RepairOrderService;
 import jakarta.validation.Valid;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,5 +46,19 @@ public class OwnerOrderController {
     @GetMapping("/{id}")
     public Result<OrderVO> detail(@AuthenticationPrincipal LoginUser user, @PathVariable Long id) {
         return Result.ok(repairOrderService.detail(user, id));
+    }
+
+    /** 业主验收（docs/02 FR-O-05）：通过 / 不通过（返工）。 */
+    @PostMapping("/{id}/confirm")
+    public Result<OrderVO> confirm(@AuthenticationPrincipal LoginUser owner,
+                                   @PathVariable Long id,
+                                   @RequestBody ConfirmRequest body) {
+        return Result.ok(repairOrderService.confirm(owner, id, body.pass, body.reason));
+    }
+
+    @Data
+    public static class ConfirmRequest {
+        private Boolean pass;
+        private String reason;
     }
 }

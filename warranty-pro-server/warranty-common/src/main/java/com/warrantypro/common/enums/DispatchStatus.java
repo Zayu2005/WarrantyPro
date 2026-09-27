@@ -1,15 +1,14 @@
 package com.warrantypro.common.enums;
 
 /**
- * 派单记录状态（docs/06 dispatch_record.status，G1 优化项）。
+ * 派单记录状态（docs/06 dispatch_record.status，迭代 2 口径：无接单环节）。
  */
 public enum DispatchStatus {
 
-    DISPATCHED("待接单"),
-    ACCEPTED("已接单"),
-    REJECTED("待接期拒单（直接回流派单池）"),
-    PENDING_REASSIGN("维修中申请改派（待客服审批）"),
-    TIMEOUT_REASSIGNED("接单超时自动改派");
+    DISPATCHED("已派单（生效中）"),
+    ARRIVED("师傅已到场"),
+    SUPERSEDED("被改派替代"),
+    TIMEOUT_REASSIGNED("到场超时自动改派");
 
     private final String label;
 

@@ -39,7 +39,7 @@
 | **报修** | 业主 / 住户提交维修请求的动作与工单本体（repair order） |
 | **保修** | 保修期内维修责任的界定（warranty），依据《建设工程质量管理条例》与物业合同；两者严格区分 |
 | 保修判定 | 引擎依据保修规则 + 起算日，判定工单责任方（开发商 / 物业 / 业主）的过程 |
-| 工单状态 | `SUBMITTED 待受理 → PENDING_DISPATCH 待派单 / EXTERNAL_PROCESSING 外部处理中 → DISPATCHED 待接单 → IN_PROGRESS 维修中 → PENDING_CONFIRM 待验收 → COMPLETED / CANCELLED`（详见 03 §1） |
+| 工单状态 | `SUBMITTED 待受理 → PENDING_DISPATCH 待派单 / EXTERNAL_PROCESSING 外部处理中 → DISPATCHED 已派单·待上门 → IN_PROGRESS 维修中 → PENDING_CONFIRM 待验收 → COMPLETED / CANCELLED`（详见 03 §1） |
 | 智能派单 | 多因子评分（技能 0.4 / 负载 0.25 / 位置 0.2 / 评分 0.15）+ Agent 复核与理由生成；模式：RECOMMEND 推荐 / AUTO 自动 / MANUAL 人工 |
 | 故障类别 | 水电 / 土建防水 / 门窗五金 / 暖通空调 / 电梯设备 / 公共设施 / 其他（师傅技能标签与其对齐） |
 | 小保 | 业主端对话式报修 AI 助手的名字（Agent ①） |

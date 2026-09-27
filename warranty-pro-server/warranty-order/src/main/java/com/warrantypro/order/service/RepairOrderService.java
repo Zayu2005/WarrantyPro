@@ -10,6 +10,7 @@ import com.warrantypro.common.enums.OrderStatus;
 import com.warrantypro.common.enums.RoleCode;
 import com.warrantypro.common.enums.Urgency;
 import com.warrantypro.common.enums.Verdict;
+import com.warrantypro.common.event.OrderAcceptedEvent;
 import com.warrantypro.common.exception.BizException;
 import com.warrantypro.common.exception.ErrorCode;
 import com.warrantypro.common.result.PageResult;
@@ -25,16 +26,20 @@ import com.warrantypro.order.dto.OrderCreateResponse;
 import com.warrantypro.order.dto.OrderVO;
 import com.warrantypro.order.entity.OrderFlowRecord;
 import com.warrantypro.order.entity.RepairOrder;
+import com.warrantypro.order.entity.RepairReport;
 import com.warrantypro.order.mapper.OrderFlowRecordMapper;
 import com.warrantypro.order.mapper.RepairOrderMapper;
+import com.warrantypro.order.mapper.RepairReportMapper;
 import com.warrantypro.user.entity.UserHouse;
 import com.warrantypro.user.mapper.UserHouseMapper;
 import com.warrantypro.warranty.dto.VerdictResult;
 import com.warrantypro.warranty.service.WarrantyVerdictService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -51,11 +56,13 @@ public class RepairOrderService {
 
     private final RepairOrderMapper repairOrderMapper;
     private final OrderFlowRecordMapper orderFlowRecordMapper;
+    private final RepairReportMapper repairReportMapper;
     private final UserHouseMapper userHouseMapper;
     private final HouseMapper houseMapper;
     private final BuildingMapper buildingMapper;
     private final FacilityMapper facilityMapper;
     private final WarrantyVerdictService warrantyVerdictService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ==================== 业主端 ====================
 
@@ -178,7 +185,8 @@ public class RepairOrderService {
     }
 
     /**
-     * 受理：按判定快照路由（保修期内 → 外部处理中；期外 → 待派单），docs/03 §1 状态机。
+     * 受理：按判定快照路由（保修期内 → 外部处理中；期外 → 待派单），随后发布受理事件
+     * 触发智能体直派（同步监听，事件处理完成后重读工单，响应即含派单结果）。
      */
     @Transactional
     public OrderVO accept(LoginUser dispatcher, Long orderId) {
@@ -198,6 +206,93 @@ public class RepairOrderService {
 
         recordFlow(order.getId(), OrderStatus.SUBMITTED, target, dispatcher.userId(),
                 RoleCode.DISPATCHER.name(), OrderAction.ACCEPT, null);
+
+        if (target == OrderStatus.PENDING_DISPATCH) {
+            eventPublisher.publishEvent(new OrderAcceptedEvent(order.getId()));
+        }
+        return toVO(repairOrderMapper.selectById(orderId), false);
+    }
+
+    // ==================== 师傅端（迭代 2：无接单环节） ====================
+
+    /** 到场打卡：已派单·待上门 → 维修中。 */
+    @Transactional
+    public OrderVO arrive(LoginUser worker, Long orderId) {
+        RepairOrder order = requireWorkerOrder(worker, orderId);
+        order.setStatus(OrderStatus.IN_PROGRESS.name());
+        order.setStartedAt(LocalDateTime.now());
+        repairOrderMapper.updateById(order);
+        recordFlow(order.getId(), OrderStatus.DISPATCHED, OrderStatus.IN_PROGRESS,
+                worker.userId(), RoleCode.WORKER.name(), OrderAction.START, null);
+        return toVO(order, false);
+    }
+
+    /** 完工提交：维修记录入库 → 待验收（docs/02 FR-W-06/08）。 */
+    @Transactional
+    public OrderVO complete(LoginUser worker, Long orderId,
+                            String faultCause, String measures, BigDecimal workHours) {
+        RepairOrder order = requireWorkerOrder(worker, orderId);
+        if (!OrderStatus.IN_PROGRESS.name().equals(order.getStatus())) {
+            throw new BizException(ErrorCode.CONFLICT, "仅维修中的工单可以完工提交");
+        }
+        RepairReport report = repairReportMapper.selectOne(new LambdaQueryWrapper<RepairReport>()
+                .eq(RepairReport::getOrderId, orderId));
+        if (report == null) {
+            report = new RepairReport();
+            report.setOrderId(orderId);
+        }
+        report.setWorkerId(worker.userId());
+        report.setFaultCause(faultCause == null ? "" : faultCause);
+        report.setMeasures(measures == null ? "" : measures);
+        report.setWorkHours(workHours);
+        report.setAiAssisted(0);
+        if (report.getId() == null) {
+            repairReportMapper.insert(report);
+        } else {
+            repairReportMapper.updateById(report);
+        }
+
+        order.setStatus(OrderStatus.PENDING_CONFIRM.name());
+        order.setCompletedAt(LocalDateTime.now());
+        repairOrderMapper.updateById(order);
+        recordFlow(order.getId(), OrderStatus.IN_PROGRESS, OrderStatus.PENDING_CONFIRM,
+                worker.userId(), RoleCode.WORKER.name(), OrderAction.COMPLETE, null);
+        return toVO(order, false);
+    }
+
+    private RepairOrder requireWorkerOrder(LoginUser worker, Long orderId) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "工单不存在");
+        }
+        if (!worker.userId().equals(order.getCurrentWorkerId())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "该工单未派给您");
+        }
+        return order;
+    }
+
+    /** 业主验收：通过 → 已完结；不通过 → 退回维修中（返工），docs/03 §6。 */
+    @Transactional
+    public OrderVO confirm(LoginUser owner, Long orderId, boolean pass, String reason) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "工单不存在");
+        }
+        if (!owner.userId().equals(order.getOwnerId())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "仅报修人可以验收");
+        }
+        if (!OrderStatus.PENDING_CONFIRM.name().equals(order.getStatus())) {
+            throw new BizException(ErrorCode.CONFLICT, "仅待验收状态的工单可以验收");
+        }
+        OrderStatus target = pass ? OrderStatus.COMPLETED : OrderStatus.IN_PROGRESS;
+        order.setStatus(target.name());
+        order.setConfirmedAt(LocalDateTime.now());
+        repairOrderMapper.updateById(order);
+
+        recordFlow(order.getId(), OrderStatus.PENDING_CONFIRM, target,
+                owner.userId(), RoleCode.OWNER.name(),
+                pass ? OrderAction.CONFIRM : OrderAction.REJECT_CONFIRM,
+                pass ? null : reason);
         return toVO(order, false);
     }
 

@@ -165,6 +165,18 @@ CREATE TABLE warranty_alert (
   KEY idx_status (status)
 ) ENGINE = InnoDB COMMENT = '保修到期预警表（每日定时任务生成，uk 保证幂等去重，G9）';
 
+CREATE TABLE worker_schedule (
+  id         BIGINT UNSIGNED AUTO_INCREMENT COMMENT '主键',
+  worker_id  BIGINT UNSIGNED NOT NULL COMMENT '师傅（sys_user.id）',
+  duty_date  DATE            NOT NULL COMMENT '值班日期',
+  shift      VARCHAR(20)     NOT NULL DEFAULT 'FULL' COMMENT '班次：FULL 全天（预留早晚班扩展）',
+  created_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_worker_date (worker_id, duty_date),
+  KEY idx_date (duty_date)
+) ENGINE = InnoDB COMMENT = '师傅排班表（管理员维护，派单候选过滤依据，迭代 2）';
+
 -- =====================================================================
 -- 3. 工单组（核心）
 -- =====================================================================
@@ -235,7 +247,7 @@ CREATE TABLE dispatch_record (
   score         DECIMAL(4, 3)   NULL COMMENT '多因子综合得分',
   factors       JSON            NULL COMMENT '四因子得分明细（skill/load/location/rating）',
   reason        VARCHAR(500)    NULL COMMENT 'Agent 推荐理由（自然语言）',
-  status        VARCHAR(20)     NOT NULL DEFAULT 'DISPATCHED' COMMENT 'DISPATCHED 待接 / ACCEPTED 已接 / REJECTED 待接期拒单 / PENDING_REASSIGN 维修中申请改派待审 / TIMEOUT_REASSIGNED 接单超时改派（G1）',
+  status        VARCHAR(20)     NOT NULL DEFAULT 'DISPATCHED' COMMENT 'DISPATCHED 已派单生效中 / SUPERSEDED 被改派替代（迭代 2：无接单环节）',
   round_no      INT             NOT NULL DEFAULT 1 COMMENT '第几轮派单（自动改派轮次，上限 3）',
   dispatched_by BIGINT UNSIGNED NULL COMMENT '人工派单时的操作客服',
   reject_reason VARCHAR(200)    NULL COMMENT '拒单 / 改派申请原因（G1）',

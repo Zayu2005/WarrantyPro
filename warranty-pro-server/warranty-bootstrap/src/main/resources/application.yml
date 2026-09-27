@@ -66,6 +66,8 @@ warranty:
     max-reassign-rounds: 3          # 最大改派轮次
     max-concurrent: 3               # 师傅并发单量上限
     auto-dispatch-timeout-minutes: 15  # 客服超时未处理转自动派单
+    arrive-timeout-hours: 4         # 到场超时（小时），超时自动改派
+    arrive-scan-ms: 60000           # 到场超时扫描间隔（毫秒）
 
   # 保修到期预警（docs/03 §7）
   warranty-alert:

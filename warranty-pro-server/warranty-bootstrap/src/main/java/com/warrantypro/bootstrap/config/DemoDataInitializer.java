@@ -1,6 +1,10 @@
 package com.warrantypro.bootstrap.config;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.warrantypro.dispatch.entity.WorkerProfile;
+import com.warrantypro.dispatch.entity.WorkerSchedule;
+import com.warrantypro.dispatch.mapper.WorkerProfileMapper;
+import com.warrantypro.dispatch.mapper.WorkerScheduleMapper;
 import com.warrantypro.estate.entity.Building;
 import com.warrantypro.estate.entity.Community;
 import com.warrantypro.estate.entity.Facility;
@@ -49,6 +53,8 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final SysUserRoleMapper sysUserRoleMapper;
     private final UserHouseMapper userHouseMapper;
     private final NoticeMapper noticeMapper;
+    private final WorkerProfileMapper workerProfileMapper;
+    private final WorkerScheduleMapper workerScheduleMapper;
     private final CommunityMapper communityMapper;
     private final BuildingMapper buildingMapper;
     private final HouseMapper houseMapper;
@@ -99,8 +105,15 @@ public class DemoDataInitializer implements CommandLineRunner {
         // 账号
         Long admin = createUser("admin", "13800000001", "系统管理员", "ADMIN");
         createUser("kefu", "13800000002", "客服小王", "DISPATCHER");
-        createUser("shifu", "13800000003", "张建国", "WORKER");
+        Long worker1 = createUser("shifu", "13800000003", "张建国", "WORKER");
         Long owner = createUser("owner", "13800000004", "李雷", "OWNER");
+        Long worker2 = createUser("wangqiang", "13800000005", "王强", "WORKER");
+
+        // 师傅画像（技能标签为 FaultCategory 中文口径）+ 今明两天排班
+        insertWorkerProfile(worker1, "[\"水电\",\"土建防水\",\"暖通空调\"]", 4.80);
+        insertWorkerProfile(worker2, "[\"水电\",\"门窗五金\"]", 4.60);
+        insertSchedules(worker1);
+        insertSchedules(worker2);
 
         // 业主绑定房屋（直接审核通过）
         UserHouse userHouse = new UserHouse();
@@ -116,7 +129,30 @@ public class DemoDataInitializer implements CommandLineRunner {
         insertNotice(community.getId(), "电梯维保公告", "3 栋 1 号电梯将于本周日进行季度维保，维保期间请乘坐 2 号电梯。", "维保");
         insertNotice(community.getId(), "屋面防水普查", "小区将开展屋面防水专项普查，如发现渗漏请及时在 App 报修。", "其他");
 
-        log.info("演示数据初始化完成：4 个账号（密码 123456）、小区/楼栋/房屋/电梯台账、3 条公告");
+        log.info("演示数据初始化完成：5 个账号（密码 123456）、小区/楼栋/房屋/电梯台账、3 条公告、2 位师傅画像与排班");
+    }
+
+    private void insertWorkerProfile(Long userId, String skillTags, double rating) {
+        WorkerProfile profile = new WorkerProfile();
+        profile.setUserId(userId);
+        profile.setSkillTags(skillTags);
+        profile.setMaxConcurrent(3);
+        profile.setOnDuty(1);
+        profile.setRatingAvg(java.math.BigDecimal.valueOf(rating));
+        profile.setRatingCount(0);
+        profile.setOrderTotal(0);
+        profile.setOrderCompleted(0);
+        workerProfileMapper.insert(profile);
+    }
+
+    private void insertSchedules(Long workerId) {
+        for (int offset = 0; offset < 2; offset++) {
+            WorkerSchedule schedule = new WorkerSchedule();
+            schedule.setWorkerId(workerId);
+            schedule.setDutyDate(java.time.LocalDate.now().plusDays(offset));
+            schedule.setShift("FULL");
+            workerScheduleMapper.insert(schedule);
+        }
     }
 
     private void insertNotice(Long communityId, String title, String content, String type) {

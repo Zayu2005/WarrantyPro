@@ -40,7 +40,7 @@ flowchart TB
 | Agent | 触发方式 | 服务对象 | 核心工具 | 降级方式 |
 |-------|---------|---------|---------|---------|
 | ① 小保·报修助手 | 用户发起（SSE 流式） | 业主 | `queryWarrantyRule`、`searchKnowledgeBase`、`createOrderDraft` | 表单报修 |
-| ② 智能派单 | 事件触发（工单受理 / 拒单 / 接单超时） | 系统 + 客服 | `listCandidateWorkers`、`getWorkerStats`、`dispatchOrder` | 纯规则评分派单 |
+| ② 智能派单 | 事件触发（工单受理 / 到场超时 / 人工改派） | 系统 + 客服 | `listCandidateWorkers`、`getWorkerStats`、`dispatchOrder` | 纯规则评分派单 |
 | ③ 维修辅助 | 师傅主动请求 | 维修师傅 | `searchSimilarOrders`、`searchKnowledgeBase`、`draftRepairReport` | 纯相似工单列表 |
 | ④ 运营分析 | 管理层发起 | 管理层 | `queryOrderStats`、`queryWorkerStats` | 标准报表页 |
 
@@ -178,12 +178,12 @@ flowchart LR
 }
 ```
 
-### 4.3 两种模式与自动改派
+### 4.3 两种模式与自动改派（迭代 2 口径：智能体直派，无接单环节）
 
 | 模式 | 触发 | 行为 |
 |------|------|------|
-| RECOMMEND 推荐（默认） | 工作时间客服在岗 | 推荐结果进入 PC 端待办，客服一键确认或人工改派（留痕） |
-| AUTO 自动 | 夜间 / 节假日 / 客服超时 15 分钟未处理 | 直接派 Top1 并 Push 通知；师傅 15 分钟未接单自动顺延次优（最多 3 轮，见 03 §5.2） |
+| AUTO 自动（默认） | 客服受理事件同步触发 | 引擎在「在岗 ∧ 当日排班 ∧ 负载未满」候选中按四因子加权直派 Top1；师傅到场超时自动改派（上限 3 轮，见 03 §5.2） |
+| MANUAL 人工 | 客服 / 管理员干预 | 指定在班师傅直派，或触发智能重派（排除原师傅）；派单记录全程留痕 |
 
 ---
 

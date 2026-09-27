@@ -8,7 +8,7 @@ public enum OrderStatus {
     SUBMITTED("待受理"),
     PENDING_DISPATCH("待派单"),
     EXTERNAL_PROCESSING("外部处理中（保修期内）"),
-    DISPATCHED("待接单（已派单）"),
+    DISPATCHED("已派单·待上门"),
     IN_PROGRESS("维修中"),
     PENDING_CONFIRM("待验收"),
     COMPLETED("已完结"),
