@@ -147,14 +147,19 @@ public class RepairOrderService {
 
     // ==================== 师傅端 ====================
 
-    /** 师傅待办：派给我且未完结的工单（待接单 + 维修中），docs/02 FR-W-02。 */
-    public PageResult<OrderVO> workerOrders(LoginUser worker, long page, long pageSize) {
-        Page<RepairOrder> result = repairOrderMapper.selectPage(new Page<>(page, pageSize),
-                new LambdaQueryWrapper<RepairOrder>()
-                        .eq(RepairOrder::getCurrentWorkerId, worker.userId())
-                        .in(RepairOrder::getStatus,
-                                OrderStatus.DISPATCHED.name(), OrderStatus.IN_PROGRESS.name())
-                        .orderByDesc(RepairOrder::getId));
+    /** 师傅工单：默认待办（待接单 + 维修中）；history=true 时含已完结（订单 Tab 历史）。 */
+    public PageResult<OrderVO> workerOrders(LoginUser worker, boolean history, long page, long pageSize) {
+        LambdaQueryWrapper<RepairOrder> wrapper = new LambdaQueryWrapper<RepairOrder>()
+                .eq(RepairOrder::getCurrentWorkerId, worker.userId())
+                .orderByDesc(RepairOrder::getId);
+        if (history) {
+            wrapper.in(RepairOrder::getStatus,
+                    OrderStatus.DISPATCHED.name(), OrderStatus.IN_PROGRESS.name(), OrderStatus.COMPLETED.name());
+        } else {
+            wrapper.in(RepairOrder::getStatus,
+                    OrderStatus.DISPATCHED.name(), OrderStatus.IN_PROGRESS.name());
+        }
+        Page<RepairOrder> result = repairOrderMapper.selectPage(new Page<>(page, pageSize), wrapper);
         return PageResult.of(result.getRecords().stream().map(o -> toVO(o, false)).toList(),
                 result.getTotal(), page, pageSize);
     }

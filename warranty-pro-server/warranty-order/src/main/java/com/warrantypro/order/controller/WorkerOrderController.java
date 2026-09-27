@@ -26,8 +26,9 @@ public class WorkerOrderController {
     @GetMapping
     @PreAuthorize("hasRole('WORKER')")
     public Result<PageResult<OrderVO>> todo(@AuthenticationPrincipal LoginUser worker,
+                                            @RequestParam(defaultValue = "false") boolean history,
                                             @RequestParam(defaultValue = "1") long page,
                                             @RequestParam(defaultValue = "20") long pageSize) {
-        return Result.ok(repairOrderService.workerOrders(worker, page, pageSize));
+        return Result.ok(repairOrderService.workerOrders(worker, history, page, pageSize));
     }
 }

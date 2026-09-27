@@ -31,6 +31,16 @@ export class ApiResult {
   data: LoginData | null = null;
 }
 
+export class FlowItem {
+  id: number = 0;
+  fromStatus: string = '';
+  toStatus: string = '';
+  operatorRole: string = '';
+  action: string = '';
+  remark: string = '';
+  createdAt: string = '';
+}
+
 export class OrderItem {
   id: number = 0;
   orderNo: string = '';
@@ -42,8 +52,11 @@ export class OrderItem {
   status: string = '';
   verdict: string = '';
   responsibleParty: string = '';
+  verdictBasis: string = '';
+  warrantyExpire: string = '';
   submittedAt: string = '';
   createdAt: string = '';
+  flows: FlowItem[] | null = null;
 }
 
 export class OrderPageData {
@@ -55,6 +68,26 @@ export class OrderPageResult {
   code: number = -1;
   message: string = '';
   data: OrderPageData | null = null;
+}
+
+export class OrderDetailResult {
+  code: number = -1;
+  message: string = '';
+  data: OrderItem | null = null;
+}
+
+export class NoticeItem {
+  id: number = 0;
+  title: string = '';
+  content: string = '';
+  type: string = '';
+  createdAt: string = '';
+}
+
+export class NoticeListResult {
+  code: number = -1;
+  message: string = '';
+  data: NoticeItem[] | null = null;
 }
 
 export class HouseItem {
@@ -152,12 +185,23 @@ export async function loginByPassword(username: string, password: string): Promi
 
 /** 我的工单（业主视角，GET /api/v1/orders/my）。 */
 export async function fetchMyOrders(token: string): Promise<OrderPageResult> {
-  return JSON.parse(await getJSON('/api/v1/orders/my?page=1&pageSize=10', token)) as OrderPageResult;
+  return JSON.parse(await getJSON('/api/v1/orders/my?page=1&pageSize=50', token)) as OrderPageResult;
 }
 
-/** 师傅待办（GET /api/v1/worker/orders）。 */
-export async function fetchWorkerOrders(token: string): Promise<OrderPageResult> {
-  return JSON.parse(await getJSON('/api/v1/worker/orders?page=1&pageSize=20', token)) as OrderPageResult;
+/** 师傅工单（GET /api/v1/worker/orders，history=true 含已完结）。 */
+export async function fetchWorkerOrders(token: string, history: boolean): Promise<OrderPageResult> {
+  const path = `/api/v1/worker/orders?history=${history}&page=1&pageSize=50`;
+  return JSON.parse(await getJSON(path, token)) as OrderPageResult;
+}
+
+/** 工单详情（含流转时间轴，GET /api/v1/orders/{id}）。 */
+export async function fetchOrderDetail(token: string, orderId: number): Promise<OrderDetailResult> {
+  return JSON.parse(await getJSON(`/api/v1/orders/${orderId}`, token)) as OrderDetailResult;
+}
+
+/** 物业公告（GET /api/v1/notices）。 */
+export async function fetchNotices(token: string): Promise<NoticeListResult> {
+  return JSON.parse(await getJSON('/api/v1/notices', token)) as NoticeListResult;
 }
 
 /** 我的房屋（GET /api/v1/houses/my，报修表单选房）。 */

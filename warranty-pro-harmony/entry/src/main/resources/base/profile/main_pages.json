@@ -1,7 +1,8 @@
 {
   "src": [
     "pages/LoginPage",
-    "pages/WorkbenchPage",
+    "pages/MainPage",
+    "pages/OrderDetailPage",
     "pages/RepairFormPage",
     "pages/Index"
   ]

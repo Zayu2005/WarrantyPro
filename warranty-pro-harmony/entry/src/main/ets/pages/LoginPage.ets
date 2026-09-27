@@ -109,7 +109,7 @@ struct LoginPage {
         role = result.data.user.roles[0];
       }
       AppStorage.setOrCreate('role', role);
-      router.replaceUrl({ url: 'pages/WorkbenchPage' });
+      router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
       this.toast('连接不上服务：请确认与电脑在同一 Wi-Fi，且 ApiClient.ets 里的 BASE_URL 正确');
     } finally {

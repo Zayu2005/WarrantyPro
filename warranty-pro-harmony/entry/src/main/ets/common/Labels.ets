@@ -61,6 +61,42 @@ export function categoryLabel(category: string): string {
   }
 }
 
+/** 流转动作的中文标签（docs/06 order_flow_record.action 口径）。 */
+export function actionLabel(action: string): string {
+  switch (action) {
+    case 'SUBMIT':
+      return '提交报修';
+    case 'ACCEPT':
+      return '客服受理';
+    case 'DISPATCH':
+      return '派单';
+    case 'REASSIGN':
+      return '改派';
+    case 'REJECT':
+      return '拒单';
+    case 'START':
+      return '师傅到场';
+    case 'PROCESSING':
+      return '维修中';
+    case 'COMPLETE':
+      return '完工提交';
+    case 'CONFIRM':
+      return '验收通过';
+    case 'REJECT_CONFIRM':
+      return '验收不通过';
+    case 'URGE':
+      return '催办';
+    case 'EXTERNAL_FOLLOWUP':
+      return '物业跟进';
+    case 'CLOSE':
+      return '关单';
+    case 'CANCEL':
+      return '取消';
+    default:
+      return action;
+  }
+}
+
 /** 保修判定结论的通俗话术（业主端展示用，docs/03 §4）。 */
 export function verdictText(verdict: string): string {
   switch (verdict) {

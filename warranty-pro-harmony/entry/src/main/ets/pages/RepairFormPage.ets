@@ -2,6 +2,11 @@ import { promptAction, router } from '@kit.ArkUI';
 import { createOrder, fetchMyHouses, HouseItem } from '../common/ApiClient';
 import { categoryLabel, verdictText } from '../common/Labels';
 
+/** 报修表单路由参数：预选故障类别（服务宫格跳入时携带）。 */
+class RepairFormParams {
+  category: string = '';
+}
+
 /**
  * 表单报修页（docs/02 FR-O-03）：选房 → 故障类别 → 位置与现象 → 紧急度 → 提交。
  * 提交成功 Toast 直接展示保修判定结论（判定引擎的业主侧露出）。
@@ -32,6 +37,10 @@ struct RepairFormPage {
   }
 
   aboutToAppear(): void {
+    const params = router.getParams() as RepairFormParams | null;
+    if (params && params.category !== '') {
+      this.category = params.category;
+    }
     this.loadHouses();
   }
 

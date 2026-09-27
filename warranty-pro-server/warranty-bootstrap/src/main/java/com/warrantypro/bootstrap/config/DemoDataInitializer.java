@@ -16,6 +16,7 @@ import com.warrantypro.user.mapper.SysRoleMapper;
 import com.warrantypro.user.mapper.SysUserMapper;
 import com.warrantypro.user.mapper.SysUserRoleMapper;
 import com.warrantypro.user.mapper.UserHouseMapper;
+import com.warrantypro.user.mapper.NoticeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -47,6 +48,7 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final SysRoleMapper sysRoleMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
     private final UserHouseMapper userHouseMapper;
+    private final NoticeMapper noticeMapper;
     private final CommunityMapper communityMapper;
     private final BuildingMapper buildingMapper;
     private final HouseMapper houseMapper;
@@ -109,7 +111,22 @@ public class DemoDataInitializer implements CommandLineRunner {
         userHouse.setAuditedBy(admin);
         userHouseMapper.insert(userHouse);
 
-        log.info("演示数据初始化完成：4 个账号（密码 123456）、小区/楼栋/房屋/电梯台账");
+        // 演示公告（鸿蒙端"服务"Tab 展示）
+        insertNotice(community.getId(), "停水通知", "本周六 09:00-17:00 小区管网检修，3 栋暂停供水，请提前储水。", "停水");
+        insertNotice(community.getId(), "电梯维保公告", "3 栋 1 号电梯将于本周日进行季度维保，维保期间请乘坐 2 号电梯。", "维保");
+        insertNotice(community.getId(), "屋面防水普查", "小区将开展屋面防水专项普查，如发现渗漏请及时在 App 报修。", "其他");
+
+        log.info("演示数据初始化完成：4 个账号（密码 123456）、小区/楼栋/房屋/电梯台账、3 条公告");
+    }
+
+    private void insertNotice(Long communityId, String title, String content, String type) {
+        com.warrantypro.user.entity.Notice notice = new com.warrantypro.user.entity.Notice();
+        notice.setCommunityId(communityId);
+        notice.setTitle(title);
+        notice.setContent(content);
+        notice.setType(type);
+        notice.setStatus("PUBLISHED");
+        noticeMapper.insert(notice);
     }
 
     private Long createUser(String username, String phone, String realName, String roleCode) {
