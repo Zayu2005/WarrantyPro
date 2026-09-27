@@ -12,7 +12,7 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     # 中间件可用 docker compose up -d 一键拉起（见 docker-compose.yml）
-    url: jdbc:mysql://localhost:3306/warranty_pro?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/warranty_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: "1234"
 
@@ -38,7 +38,7 @@ mybatis-plus:
   global-config:
     banner: false
     db-config:
-      # 逻辑删除字段约定见 docs/06 §1
+      id-type: auto               # 与 DDL 的自增主键一致
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
@@ -49,6 +49,12 @@ logging:
 
 # ==================== 业务自定义配置（实现阶段使用） ====================
 warranty:
+  # JWT（生产环境必须用环境变量覆盖 secret）
+  jwt:
+    secret: warrantypro-dev-jwt-secret-please-change-in-production
+    access-expire-minutes: 120
+    refresh-expire-days: 7
+
   # 智能派单参数（docs/03 §5.1）
   dispatch:
     weights:

@@ -7,3 +7,4 @@ target/
 logs/
 *.log
 .flattened-pom.xml
+tmp-test/
