@@ -1,3 +1,33 @@
+/* ============================================================
+   WarrantyPro 设计令牌 —— 与鸿蒙端同一品牌体系
+   松青（主）/ 苔青（次）/ 琥珀（签名强调）/ 纸灰绿（底）
+   ============================================================ */
+:root {
+  --wp-ink: #103B3A;
+  --wp-ink-deep: #0B2B2A;
+  --wp-moss: #2E6D67;
+  --wp-amber: #E8930C;
+  --wp-brick: #C4472E;
+  --wp-paper: #F2F5F3;
+  --wp-card: #FFFFFF;
+  --wp-mist: #DCE7E3;
+  --wp-hairline: #EDF2F0;
+  --wp-muted: #8A968F;
+  --wp-teal-blue: #5B7A9D;
+
+  /* Element Plus 主色对齐品牌（light/dark 变体按混白比例预计算） */
+  --el-color-primary: #103B3A;
+  --el-color-primary-light-3: #587675;
+  --el-color-primary-light-5: #879D9C;
+  --el-color-primary-light-7: #B7C4C4;
+  --el-color-primary-light-8: #CFD7D7;
+  --el-color-primary-light-9: #E7EBEB;
+  --el-color-primary-dark-2: #0C2F2E;
+  --el-color-warning: #E8930C;
+  --el-color-error: #C4472E;
+  --el-border-radius-base: 8px;
+}
+
 html,
 body,
 #app {
@@ -7,7 +37,41 @@ body,
 }
 
 body {
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  font-family: 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-color: #f5f7fa;
+  background: var(--wp-paper);
+  color: var(--wp-ink);
+}
+
+/* 卡片：发丝描边替代重阴影 */
+.wp-card {
+  background: var(--wp-card);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 0 0 1px rgba(16, 59, 58, 0.05), 0 1px 3px rgba(16, 59, 58, 0.05);
+}
+
+/* 统计数字：等宽数字，扫读不跳 */
+.wp-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* 细滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--wp-mist);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c3d2cd;
 }
