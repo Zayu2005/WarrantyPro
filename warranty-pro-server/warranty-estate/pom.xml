@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.warrantypro</groupId>
+        <artifactId>warranty-pro-server</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>warranty-estate</artifactId>
+    <name>warranty-estate</name>
+    <description>房产与设施台账：小区 / 楼栋 / 房屋 / 设施设备（保修起止日），保修判定起算数据源（docs/06 §3.2）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.warrantypro</groupId>
+            <artifactId>warranty-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>

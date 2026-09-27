@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.warrantypro</groupId>
+        <artifactId>warranty-pro-server</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>warranty-user</artifactId>
+    <name>warranty-user</name>
+    <description>用户 / 角色 / 权限：五角色 RBAC 与业主-房屋绑定审核（docs/02 §1、FR-A-03）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.warrantypro</groupId>
+            <artifactId>warranty-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>

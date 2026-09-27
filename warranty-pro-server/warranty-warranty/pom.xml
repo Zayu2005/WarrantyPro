@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.warrantypro</groupId>
+        <artifactId>warranty-pro-server</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>warranty-warranty</artifactId>
+    <name>warranty-warranty</name>
+    <description>保修期限规则配置 + 保修判定引擎（纯规则零 AI 依赖，100% 确定可解释，docs/03 §4）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.warrantypro</groupId>
+            <artifactId>warranty-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>

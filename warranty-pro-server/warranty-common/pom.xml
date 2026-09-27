@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.warrantypro</groupId>
+        <artifactId>warranty-pro-server</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>warranty-common</artifactId>
+    <name>warranty-common</name>
+    <description>统一响应体 / 异常 / 错误码 / 枚举常量（工单状态机等口径的唯一出处，见 docs/06 §1）</description>
+</project>

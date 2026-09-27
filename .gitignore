@@ -1,0 +1,22 @@
+# ==== OS / IDE ====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# ==== ZCode 本地数据 ====
+.zcode/
+
+# ==== Java / warranty-pro-server ====
+warranty-pro-server/**/target/
+warranty-pro-server/.flattened-pom.xml
+
+# ==== Node / warranty-pro-web ====
+warranty-pro-web/node_modules/
+warranty-pro-web/dist/
+warranty-pro-web/*.local
+
+# ==== 日志 ====
+logs/
+*.log

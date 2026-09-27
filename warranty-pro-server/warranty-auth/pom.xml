@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.warrantypro</groupId>
+        <artifactId>warranty-pro-server</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>warranty-auth</artifactId>
+    <name>warranty-auth</name>
+    <description>认证授权：Spring Security + JWT，多端令牌与 Redis 黑名单（docs/02 FR-S-01、docs/04 §6）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.warrantypro</groupId>
+            <artifactId>warranty-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>

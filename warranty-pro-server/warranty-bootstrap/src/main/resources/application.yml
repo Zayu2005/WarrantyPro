@@ -1,0 +1,80 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  application:
+    name: warranty-pro-server
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 中间件可用 docker compose up -d 一键拉起（见 docker-compose.yml）
+    url: jdbc:mysql://localhost:3306/warranty_pro?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root123456
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  servlet:
+    multipart:
+      # 照片上传限制（docs/04 §6：单文件 ≤10MB）
+      max-file-size: 10MB
+      max-request-size: 60MB
+
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      # 逻辑删除字段约定见 docs/06 §1
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  level:
+    com.warrantypro: debug
+
+# ==================== 业务自定义配置（实现阶段使用） ====================
+warranty:
+  # 智能派单参数（docs/03 §5.1）
+  dispatch:
+    weights:
+      skill: 0.40
+      load: 0.25
+      location: 0.20
+      rating: 0.15
+    accept-timeout-minutes: 15      # 接单超时自动改派
+    max-reassign-rounds: 3          # 最大改派轮次
+    max-concurrent: 3               # 师傅并发单量上限
+    auto-dispatch-timeout-minutes: 15  # 客服超时未处理转自动派单
+
+  # 保修到期预警（docs/03 §7）
+  warranty-alert:
+    ahead-days: 90
+
+  # 验收超时默认通过（docs/03 §8）
+  confirm:
+    auto-pass-hours: 48
+
+  # AI Agent（docs/05；OpenAI 兼容协议，供应商可配置切换）
+  ai:
+    enabled: true
+    provider: zhipu                 # zhipu / deepseek
+    base-url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-4v-plus
+    embedding-model: embedding-3
+    api-key: ${WARRANTY_AI_API_KEY:}
+    health-check-interval-seconds: 60

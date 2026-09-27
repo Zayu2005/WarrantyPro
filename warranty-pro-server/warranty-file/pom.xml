@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.warrantypro</groupId>
+        <artifactId>warranty-pro-server</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>warranty-file</artifactId>
+    <name>warranty-file</name>
+    <description>文件服务：MinIO 对象存储，类型白名单 / 大小校验 / 临时签名链接（docs/02 FR-S-05、docs/04 §6）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.warrantypro</groupId>
+            <artifactId>warranty-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>
