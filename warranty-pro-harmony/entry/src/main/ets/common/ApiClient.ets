@@ -2,11 +2,13 @@ import { http } from '@kit.NetworkKit';
 
 /**
  * 全局接口配置。
- * BASE_URL 填电脑的局域网 IPv4（cmd 里 ipconfig 查看），手机 / 模拟器需与电脑在同一 Wi-Fi。
+ * BASE_URL 按运行环境选择：
+ *  - DevEco 预览器 / 本机模拟器（共享本机网络）：http://localhost:8080
+ *  - 真机 / 远程设备：填电脑的局域网 IPv4（cmd 里 ipconfig 查看），并确保同一 Wi-Fi
  * 生产环境必须改为 HTTPS 域名。
  */
 export class ApiConfig {
-  static readonly BASE_URL: string = 'http://10.10.10.6:8080';
+  static readonly BASE_URL: string = 'http://localhost:8080';
 }
 
 // ==================== 类型（与后端 docs/07 契约对齐） ====================
