@@ -4,6 +4,7 @@
     "pages/MainPage",
     "pages/OrderDetailPage",
     "pages/WorkerCompletePage",
+    "pages/ProfileEditPage",
     "pages/RepairFormPage",
     "pages/Index"
   ]

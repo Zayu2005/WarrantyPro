@@ -194,6 +194,22 @@ export struct ProfilePage {
         // ---- 功能列表 ----
         Column() {
           Row() {
+            Text('编辑资料 / 修改密码')
+              .fontSize(14)
+              .fontColor(this.C_INK)
+              .layoutWeight(1)
+            Text('›')
+              .fontSize(16)
+              .fontColor(this.C_MUTED)
+          }
+          .width('100%')
+          .padding({ top: 14, bottom: 14 })
+          .border({ width: { bottom: 1 }, color: this.C_MIST })
+          .onClick(() => {
+            router.pushUrl({ url: 'pages/ProfileEditPage' });
+          })
+
+          Row() {
             Text('关于 WarrantyPro')
               .fontSize(14)
               .fontColor(this.C_INK)

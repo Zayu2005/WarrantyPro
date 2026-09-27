@@ -242,6 +242,33 @@ export class WorkerActionResult {
   message: string = '';
 }
 
+class UpdateProfileBody {
+  realName: string = '';
+  phone: string = '';
+}
+
+class ChangePasswordBody {
+  oldPassword: string = '';
+  newPassword: string = '';
+}
+
+/** 修改基本资料（PUT /api/v1/users/me）。 */
+export async function updateProfile(token: string, realName: string, phone: string): Promise<WorkerActionResult> {
+  const body: UpdateProfileBody = new UpdateProfileBody();
+  body.realName = realName;
+  body.phone = phone;
+  return JSON.parse(await postJSON('/api/v1/users/me', body, token)) as WorkerActionResult;
+}
+
+/** 修改密码（PUT /api/v1/users/me/password）。 */
+export async function changePassword(token: string, oldPassword: string,
+  newPassword: string): Promise<WorkerActionResult> {
+  const body: ChangePasswordBody = new ChangePasswordBody();
+  body.oldPassword = oldPassword;
+  body.newPassword = newPassword;
+  return JSON.parse(await postJSON('/api/v1/users/me/password', body, token)) as WorkerActionResult;
+}
+
 /** 师傅完工提交（POST /api/v1/worker/orders/{id}/complete）。 */
 export async function completeOrder(token: string, orderId: number,
   faultCause: string, measures: string, workHours: number): Promise<WorkerActionResult> {
