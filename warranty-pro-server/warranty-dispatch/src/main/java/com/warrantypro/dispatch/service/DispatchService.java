@@ -39,8 +39,8 @@ import java.util.Map;
 /**
  * 智能派单服务（docs/03 §5、docs/05 §4）。
  *
- * <p>规则引擎确定性评分：候选过滤（在岗 ∧ 当日排班 ∧ 负载上限 ∧ 技能匹配）
- * → 四因子加权（技能 0.4 / 负载 0.25 / 位置 0.2 / 评分 0.15，权重可配）→ Top1 直派。
+ * <p>规则引擎确定性评分：候选过滤（在岗 ∧ 当日排班 ∧ 负载上限，技能不限领域）
+ * → 四因子加权（技能 0.4 仅作偏好 / 负载 0.25 / 位置 0.2 / 评分 0.15，权重可配）→ Top1 直派。
  * 派单记录与决策日志全量落库，可解释可审计；LLM 理由生成在接入模型 API 后叠加（迭代 3）。</p>
  */
 @Slf4j
@@ -82,9 +82,8 @@ public class DispatchService {
         // 1. 候选池：在岗 ∧ 当日排班
         List<CandidateWorker> pool = workerProfileMapper.selectDutyWorkers(LocalDate.now());
 
-        // 2. 负载过滤 + 技能分级（技能满分者优先；无满分候选时放宽到相关/其他技能）
-        List<Scored> skilled = new ArrayList<>();
-        List<Scored> fallback = new ArrayList<>();
+        // 2. 负载过滤 + 评分（技能不限领域：任何在班师傅均可接单，技能仅作加分偏好）
+        List<Scored> candidates = new ArrayList<>();
         for (CandidateWorker w : pool) {
             if (excludeWorkerId != null && w.getUserId().equals(excludeWorkerId)) {
                 continue;
@@ -97,14 +96,8 @@ public class DispatchService {
             if (inProgress >= max) {
                 continue;
             }
-            Scored scored = score(w, inProgress, max, category, order);
-            if (scored.factors.get("skill") >= 1.0) {
-                skilled.add(scored);
-            } else {
-                fallback.add(scored);
-            }
+            candidates.add(score(w, inProgress, max, category, order));
         }
-        List<Scored> candidates = !skilled.isEmpty() ? skilled : fallback;
         candidates.sort((a, b) -> Double.compare(b.score, a.score));
 
         if (candidates.isEmpty()) {
@@ -242,17 +235,17 @@ public class DispatchService {
         return new Scored(w, round3(total), factors, (int) inProgress);
     }
 
-    /** 技能匹配度：精确命中 1.0；水电↔暖通相关 0.6；其余 0。 */
+    /** 技能匹配度（仅作评分偏好，不限领域）：精确命中 1.0；水电↔暖通相关 0.6；其他领域 0.3。 */
     private double skillScore(String tags, FaultCategory category) {
         if (tags == null) {
-            return 0.0;
+            return 0.3;
         }
         if (tags.contains(category.getLabel())) {
             return 1.0;
         }
         boolean related = (category == FaultCategory.WATER_ELECTRICITY && tags.contains("暖通空调"))
                 || (category == FaultCategory.HVAC && tags.contains("水电"));
-        return related ? 0.6 : 0.0;
+        return related ? 0.6 : 0.3;
     }
 
     private String buildReason(Scored best) {
