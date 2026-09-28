@@ -232,7 +232,7 @@ export async function fetchMyHouses(token: string): Promise<HouseListResult> {
   return JSON.parse(await getJSON('/api/v1/houses/my', token)) as HouseListResult;
 }
 
-/** 提交表单报修（POST /api/v1/orders，含保修判定）。 */
+/** 提交表单报修（POST /api/v1/orders，统一进入派单流程）。 */
 export async function createOrder(token: string, category: string, houseId: number,
   locationDetail: string, phenomenon: string, urgency: string): Promise<OrderCreateResult> {
   const body: CreateOrderBody = new CreateOrderBody();

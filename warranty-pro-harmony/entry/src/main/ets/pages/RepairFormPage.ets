@@ -1,6 +1,6 @@
 import { promptAction, router } from '@kit.ArkUI';
 import { createOrder, fetchMyHouses, HouseItem } from '../common/ApiClient';
-import { categoryLabel, verdictText } from '../common/Labels';
+import { categoryLabel } from '../common/Labels';
 
 /** 报修表单路由参数：预选故障类别（服务宫格跳入时携带）。 */
 class RepairFormParams {
@@ -9,7 +9,7 @@ class RepairFormParams {
 
 /**
  * 表单报修页（docs/02 FR-O-03）：选房 → 故障类别 → 位置与现象 → 紧急度 → 提交。
- * 提交成功 Toast 直接展示保修判定结论（判定引擎的业主侧露出）。
+ * 提交成功后进入统一派单流程。
  */
 @Entry
 @Component
@@ -76,8 +76,7 @@ struct RepairFormPage {
         promptAction.showToast({ message: result.message === '' ? '提交失败，请稍后再试' : result.message });
         return;
       }
-      const verdict = result.data.verdict.verdict;
-      promptAction.showToast({ message: `${result.data.orderNo} 已提交｜${verdictText(verdict)}` });
+      promptAction.showToast({ message: `${result.data.orderNo} 已提交，正在安排师傅` });
       router.back();
     } catch (err) {
       promptAction.showToast({ message: '连接不上服务，请检查网络后重试' });
@@ -230,7 +229,7 @@ struct RepairFormPage {
               this.onSubmit();
             })
 
-          Text('提交后自动判定保修期内 / 期外，责任方一目了然')
+          Text('提交后进入统一派单流程，师傅到场后可追踪进度')
             .fontSize(11)
             .fontColor(this.C_MUTED)
             .margin({ top: 12 })

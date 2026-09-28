@@ -152,7 +152,7 @@ export struct HomePage {
                   .fontSize(17)
                   .fontWeight(FontWeight.Bold)
                   .fontColor(this.C_INK)
-                Text('描述故障，自动判定保修责任')
+                Text('描述故障，提交后安排师傅处理')
                   .fontSize(12)
                   .fontColor(this.C_MUTED)
               }

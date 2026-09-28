@@ -2,9 +2,7 @@ package com.warrantypro.order.dto;
 
 import com.warrantypro.warranty.dto.VerdictResult;
 
-/**
- * 提交工单响应：工单标识 + 保修判定书（业主端展示通俗结论，判定书随工单快照留存）。
- */
+/** 提交工单响应：工单标识；verdict 字段保留用于兼容旧客户端，新工单为空。 */
 public record OrderCreateResponse(
         Long orderId,
         String orderNo,

@@ -1,6 +1,6 @@
 # warranty-pro-harmony · 鸿蒙端 App
 
-数字化物业保修平台鸿蒙端（HarmonyOS NEXT / ArkTS）。业主与维修师傅共用一个 App，登录后按角色渲染工作台。
+数字化物业报修平台鸿蒙端（HarmonyOS NEXT / ArkTS）。业主与维修师傅共用一个 App，登录后按角色渲染工作台。
 
 ## 当前状态
 

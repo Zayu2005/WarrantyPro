@@ -58,11 +58,11 @@ async function onLogin() {
             <span class="step-label" :class="i === 2 ? 'on' : ''">{{ s }}</span>
           </div>
         </div>
-        <h1 class="bp-thesis">报修有进度，<br />保修有依据</h1>
-        <p class="bp-sub">数字化物业保修平台 · 管理后台</p>
+        <h1 class="bp-thesis">报修有进度，<br />处理有结果</h1>
+        <p class="bp-sub">数字化物业报修平台 · 管理后台</p>
       </div>
 
-      <div class="bp-foot">客服调度 · 保修台账 · 数据看板</div>
+      <div class="bp-foot">客服调度 · 设施台账 · 数据看板</div>
     </aside>
 
     <!-- 表单区 -->

@@ -11,7 +11,6 @@ import com.warrantypro.common.enums.OrderSource;
 import com.warrantypro.common.enums.OrderStatus;
 import com.warrantypro.common.enums.RoleCode;
 import com.warrantypro.common.enums.Urgency;
-import com.warrantypro.common.enums.Verdict;
 import com.warrantypro.common.event.OrderAcceptedEvent;
 import com.warrantypro.common.exception.BizException;
 import com.warrantypro.common.exception.ErrorCode;
@@ -51,7 +50,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 报修工单服务：提交（含保修判定快照）、业主查询、客服工单池与受理（docs/03 §2、§4）。
+ * 报修工单服务：提交、业主查询、客服工单池与受理。
+ * 保修判定字段仅作为兼容快照保留，不再参与新工单路由。
  */
 @Service
 @RequiredArgsConstructor
@@ -103,9 +103,6 @@ public class RepairOrderService {
             communityId = facility.getCommunityId();
         }
 
-        // 保修判定（预判定快照，客服受理时可复核纠正）
-        VerdictResult verdict = warrantyVerdictService.judge(objectType, category, req.houseId(), req.facilityId());
-
         RepairOrder order = new RepairOrder();
         order.setOrderNo(nextOrderNo());
         order.setCommunityId(communityId);
@@ -120,11 +117,19 @@ public class RepairOrderService {
         order.setSource(OrderSource.FORM.name());
         order.setSourceSessionId(req.sourceSessionId());
         order.setStatus(OrderStatus.SUBMITTED.name());
-        order.setVerdict(verdict.verdict().name());
-        order.setResponsibleParty(verdict.responsibleParty().name());
-        order.setVerdictBasis(verdict.basis());
-        order.setWarrantyStart(verdict.warrantyStart());
-        order.setWarrantyExpire(verdict.warrantyExpire());
+        // 尽力保留判定快照和响应结构，兼容历史客户端；判定失败或缺少规则时不阻断报修，
+        // 且该结果从不参与新工单路由。
+        VerdictResult verdict = null;
+        try {
+            verdict = warrantyVerdictService.judge(objectType, category, req.houseId(), req.facilityId());
+            order.setVerdict(verdict.verdict().name());
+            order.setResponsibleParty(verdict.responsibleParty().name());
+            order.setVerdictBasis(verdict.basis());
+            order.setWarrantyStart(verdict.warrantyStart());
+            order.setWarrantyExpire(verdict.warrantyExpire());
+        } catch (RuntimeException ignored) {
+            // 保修规则属于兼容能力，不影响统一报修派单主链路。
+        }
         order.setPaidStatus("NOT_REQUIRED");
         order.setSubmittedAt(LocalDateTime.now());
         repairOrderMapper.insert(order);
@@ -192,8 +197,8 @@ public class RepairOrderService {
     }
 
     /**
-     * 受理：按判定快照路由（保修期内 → 外部处理中；期外 → 待派单），随后发布受理事件
-     * 触发智能体直派（同步监听，事件处理完成后重读工单，响应即含派单结果）。
+     * 受理：所有新工单统一进入派单池，随后触发智能体直派。
+     * 保修判定快照只为历史兼容保留，不再分流到外部处理中。
      */
     @Transactional
     public OrderVO accept(LoginUser dispatcher, Long orderId) {
@@ -204,9 +209,7 @@ public class RepairOrderService {
         if (!OrderStatus.SUBMITTED.name().equals(order.getStatus())) {
             throw new BizException(ErrorCode.CONFLICT, "仅待受理状态的工单可以受理");
         }
-        OrderStatus target = Verdict.IN_WARRANTY.name().equals(order.getVerdict())
-                ? OrderStatus.EXTERNAL_PROCESSING
-                : OrderStatus.PENDING_DISPATCH;
+        OrderStatus target = OrderStatus.PENDING_DISPATCH;
         order.setStatus(target.name());
         order.setAcceptedAt(LocalDateTime.now());
         repairOrderMapper.updateById(order);
@@ -214,9 +217,7 @@ public class RepairOrderService {
         recordFlow(order.getId(), OrderStatus.SUBMITTED, target, dispatcher.userId(),
                 RoleCode.DISPATCHER.name(), OrderAction.ACCEPT, null);
 
-        if (target == OrderStatus.PENDING_DISPATCH) {
-            eventPublisher.publishEvent(new OrderAcceptedEvent(order.getId()));
-        }
+        eventPublisher.publishEvent(new OrderAcceptedEvent(order.getId()));
         return toVO(repairOrderMapper.selectById(orderId), false);
     }
 

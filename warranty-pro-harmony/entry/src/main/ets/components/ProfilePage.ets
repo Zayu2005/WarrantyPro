@@ -222,7 +222,7 @@ export struct ProfilePage {
           .padding({ top: 14, bottom: 14 })
           .border({ width: { bottom: 1 }, color: this.C_MIST })
           .onClick(() => {
-            promptAction.showToast({ message: '数字化物业保修平台 · 比赛演示版' });
+            promptAction.showToast({ message: '数字化物业报修平台 · 比赛演示版' });
           })
 
           Text('退出登录')

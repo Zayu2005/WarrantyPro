@@ -37,7 +37,7 @@ function onCommand(command: string | number | object) {
         </el-menu-item>
         <el-menu-item index="/warranty-ledger">
           <el-icon><Notebook /></el-icon>
-          <span>保修台账</span>
+          <span>设施台账</span>
         </el-menu-item>
         <el-menu-item index="/schedule">
           <el-icon><Calendar /></el-icon>

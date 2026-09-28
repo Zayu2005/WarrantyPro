@@ -1,6 +1,8 @@
-# WarrantyPro · 数字化物业保修平台
+# WarrantyPro · 数字化物业报修平台
 
-> **一句话定位**：面向住宅小区的「报修 + 保修」一体化数字平台 —— 业主在鸿蒙端与 AI 助手对话完成报修，系统自动判定保修责任、智能派单给维修师傅，全流程透明可追溯；物业在 PC 端完成工单调度、保修台账与数据化运营。
+> 当前业务口径：所有新工单统一进入派单流程；保修判定字段和规则表保留用于兼容历史数据和旧客户端，不再参与新工单路由。
+
+> **一句话定位**：面向住宅小区的数字化报修平台 —— 业主在鸿蒙端提交报修，系统统一智能派单给维修师傅，全流程透明可追溯；物业在 PC 端完成工单调度、设施管理与数据化运营。
 
 ---
 
@@ -10,7 +12,7 @@
 |----|------|
 | 产品形态 | 三端一云 + AI Agent：鸿蒙端 App（业主 / 师傅）· PC 管理后台 · Spring Boot 后端 |
 | 角色 | OWNER 业主 · WORKER 维修师傅 · DISPATCHER 物业客服 · MANAGER 管理层 · ADMIN 系统管理员 |
-| 核心业务 | 报修（对话式 / 表单）→ 保修判定 → 智能派单 → 维修 → 验收评价 → 数据沉淀 |
+| 核心业务 | 报修（对话式 / 表单）→ 智能派单 → 维修 → 验收评价 → 数据沉淀 |
 | AI Agent | ①小保·对话报修助手 ②智能派单（可解释）③维修辅助 ④运营分析 |
 | 技术栈 | Spring Boot 3.3+（Java 21）· MyBatis-Plus · MySQL 8 · Redis Stack · MinIO · Spring AI · Vue3 + Element Plus · ArkTS（HarmonyOS NEXT）|
 | 部署 | Docker Compose 一键拉起（Nginx + 后端 + MySQL + Redis Stack + MinIO）|
@@ -37,9 +39,9 @@
 | 术语 | 含义 |
 |------|------|
 | **报修** | 业主 / 住户提交维修请求的动作与工单本体（repair order） |
-| **保修** | 保修期内维修责任的界定（warranty），依据《建设工程质量管理条例》与物业合同；两者严格区分 |
-| 保修判定 | 引擎依据保修规则 + 起算日，判定工单责任方（开发商 / 物业 / 业主）的过程 |
-| 工单状态 | `SUBMITTED 待受理 → PENDING_DISPATCH 待派单 / EXTERNAL_PROCESSING 外部处理中 → DISPATCHED 已派单·待上门 → IN_PROGRESS 维修中 → PENDING_CONFIRM 待验收 → COMPLETED / CANCELLED`（详见 03 §1） |
+| **统一派单** | 所有新工单采用同一派单流程，按排班、负载、位置和评分选择维修师傅 |
+| 历史保修字段 | 数据库保留保修快照字段，判定结果仅用于兼容展示，不参与新工单路由 |
+| 工单状态 | `SUBMITTED 待受理 → PENDING_DISPATCH 待派单 → DISPATCHED 已派单·待上门 → IN_PROGRESS 维修中 → PENDING_CONFIRM 待验收 → COMPLETED / CANCELLED`（详见 03 §1） |
 | 智能派单 | 多因子评分（技能 0.4 / 负载 0.25 / 位置 0.2 / 评分 0.15）+ Agent 复核与理由生成；模式：RECOMMEND 推荐 / AUTO 自动 / MANUAL 人工 |
 | 故障类别 | 水电 / 土建防水 / 门窗五金 / 暖通空调 / 电梯设备 / 公共设施 / 其他（师傅技能标签与其对齐） |
 | 小保 | 业主端对话式报修 AI 助手的名字（Agent ①） |

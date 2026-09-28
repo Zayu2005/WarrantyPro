@@ -234,7 +234,7 @@ struct LoginPage {
         }
         .margin({ top: 56 })
 
-        Text('数字化物业保修平台')
+        Text('数字化物业报修平台')
           .fontSize(13)
           .fontColor(this.C_MUTED)
           .margin({ top: 6 })
@@ -242,7 +242,7 @@ struct LoginPage {
         // ---- 签名：工单进度条 ----
         this.ProgressSignature()
 
-        Text('报修有进度，保修有依据')
+        Text('报修有进度，处理有结果')
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.C_INK)

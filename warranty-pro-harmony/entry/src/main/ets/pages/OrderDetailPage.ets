@@ -1,9 +1,9 @@
 import { promptAction, router } from '@kit.ArkUI';
 import { arriveOrder, completeOrder, confirmOrder, evaluateOrder, fetchOrderDetail, OrderItem, FlowItem } from '../common/ApiClient';
-import { statusLabel, statusColor, categoryLabel, verdictText, actionLabel } from '../common/Labels';
+import { statusLabel, statusColor, categoryLabel, actionLabel } from '../common/Labels';
 
 /**
- * 工单详情：状态头部 + 保修判定卡 + 流转时间轴（docs/02 FR-O-04）。
+ * 工单详情：状态头部 + 流转时间轴（docs/02 FR-O-04）。
  * 师傅角色在详情内直接操作：待上门 → 到场打卡；维修中 → 完工提交。
  */
 @Entry
@@ -312,37 +312,6 @@ struct OrderDetailPage {
             .backgroundColor(statusColor(this.order.status) === '#8A968F' ? this.C_INK : this.C_INK)
 
             this.WorkerActions()
-
-            // ---- 保修判定卡 ----
-            Column({ space: 8 }) {
-              Text('保修判定')
-                .fontSize(13)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(this.C_INK)
-              Row({ space: 8 }) {
-                Text(verdictText(this.order.verdict))
-                  .fontSize(14)
-                  .fontColor(this.order.verdict === 'IN_WARRANTY' ? this.C_MOSS : this.C_AMBER)
-                  .fontWeight(FontWeight.Medium)
-                  .layoutWeight(1)
-              }
-              .width('100%')
-
-              if (this.order.verdictBasis !== '') {
-                Text(`依据：${this.order.verdictBasis}`)
-                  .fontSize(11)
-                  .fontColor(this.C_MUTED)
-                  .width('100%')
-              }
-            }
-            .alignItems(HorizontalAlign.Start)
-            .width('100%')
-            .padding(16)
-            .borderRadius(14)
-            .backgroundColor(Color.White)
-            .border({ width: { left: 3 }, color: this.C_AMBER })
-            .shadow({ radius: 6, color: 'rgba(16,59,58,0.08)', offsetY: 2 })
-            .margin({ top: 14 })
 
             // ---- 流转时间轴 ----
             Column({ space: 2 }) {
