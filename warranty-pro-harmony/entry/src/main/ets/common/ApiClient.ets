@@ -247,6 +247,36 @@ export async function createOrder(token: string, category: string, houseId: numb
 class EmptyBody {
 }
 
+class ConfirmOrderBody {
+  pass: boolean = false;
+  reason: string = '';
+}
+
+class EvaluationBody {
+  stars: number = 5;
+  tags: string[] = [];
+  comment: string = '';
+}
+
+/** 业主验收（POST /api/v1/orders/{id}/confirm）。 */
+export async function confirmOrder(token: string, orderId: number,
+  pass: boolean, reason: string = ''): Promise<ApiResult> {
+  const body: ConfirmOrderBody = new ConfirmOrderBody();
+  body.pass = pass;
+  body.reason = reason;
+  return JSON.parse(await postJSON(`/api/v1/orders/${orderId}/confirm`, body, token)) as ApiResult;
+}
+
+/** 业主评价（POST /api/v1/orders/{id}/evaluation）。 */
+export async function evaluateOrder(token: string, orderId: number,
+  stars: number, comment: string): Promise<WorkerActionResult> {
+  const body: EvaluationBody = new EvaluationBody();
+  body.stars = stars;
+  body.tags = stars >= 4 ? ['速度快', '一次修复'] : ['需要改进'];
+  body.comment = comment;
+  return JSON.parse(await postJSON(`/api/v1/orders/${orderId}/evaluation`, body, token)) as WorkerActionResult;
+}
+
 /** 师傅到场打卡（POST /api/v1/worker/orders/{id}/arrive）。 */
 export async function arriveOrder(token: string, orderId: number): Promise<ApiResult> {
   return JSON.parse(await postJSON(`/api/v1/worker/orders/${orderId}/arrive`, new EmptyBody(), token)) as ApiResult;

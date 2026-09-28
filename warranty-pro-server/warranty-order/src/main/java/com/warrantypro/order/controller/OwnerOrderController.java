@@ -4,6 +4,7 @@ import com.warrantypro.common.result.PageResult;
 import com.warrantypro.common.result.Result;
 import com.warrantypro.common.security.LoginUser;
 import com.warrantypro.order.dto.CreateOrderRequest;
+import com.warrantypro.order.dto.EvaluationRequest;
 import com.warrantypro.order.dto.OrderCreateResponse;
 import com.warrantypro.order.dto.OrderVO;
 import com.warrantypro.order.service.RepairOrderService;
@@ -53,7 +54,20 @@ public class OwnerOrderController {
     public Result<OrderVO> confirm(@AuthenticationPrincipal LoginUser owner,
                                    @PathVariable Long id,
                                    @RequestBody ConfirmRequest body) {
+        if (body == null || body.pass == null) {
+            throw new com.warrantypro.common.exception.BizException(
+                    com.warrantypro.common.exception.ErrorCode.PARAM_INVALID, "验收结果不能为空");
+        }
         return Result.ok(repairOrderService.confirm(owner, id, body.pass, body.reason));
+    }
+
+    /** 完结工单评价（docs/07 §2.2）。 */
+    @PostMapping("/{id}/evaluation")
+    public Result<Void> evaluate(@AuthenticationPrincipal LoginUser owner,
+                                 @PathVariable Long id,
+                                 @Valid @RequestBody EvaluationRequest request) {
+        repairOrderService.evaluate(owner, id, request);
+        return Result.ok();
     }
 
     @Data

@@ -1,5 +1,5 @@
 import { promptAction, router } from '@kit.ArkUI';
-import { arriveOrder, completeOrder, fetchOrderDetail, OrderItem, FlowItem } from '../common/ApiClient';
+import { arriveOrder, completeOrder, confirmOrder, evaluateOrder, fetchOrderDetail, OrderItem, FlowItem } from '../common/ApiClient';
 import { statusLabel, statusColor, categoryLabel, verdictText, actionLabel } from '../common/Labels';
 
 /**
@@ -12,6 +12,8 @@ struct OrderDetailPage {
   @State order: OrderItem = new OrderItem();
   @State loaded: boolean = false;
   @State actionLoading: boolean = false;
+  @State evaluationComment: string = '';
+  @State starsText: string = '5';
   private orderId: number = 0;
   private role: string = (AppStorage.get<string>('role') ?? 'OWNER');
 
@@ -69,6 +71,53 @@ struct OrderDetailPage {
     }
   }
 
+  private async onConfirm(pass: boolean): Promise<void> {
+    if (this.actionLoading) {
+      return;
+    }
+    this.actionLoading = true;
+    try {
+      const token = AppStorage.get<string>('accessToken') ?? '';
+      const result = await confirmOrder(token, this.orderId, pass, pass ? '' : '业主申请返工，请重新检查维修效果');
+      if (result.code !== 0) {
+        promptAction.showToast({ message: result.message === '' ? '验收失败，请稍后再试' : result.message });
+        return;
+      }
+      promptAction.showToast({ message: pass ? '验收通过' : '已退回维修，师傅将重新处理' });
+      await this.loadData();
+    } catch (err) {
+      promptAction.showToast({ message: '连接不上服务，请检查网络' });
+    } finally {
+      this.actionLoading = false;
+    }
+  }
+
+  private async onEvaluate(): Promise<void> {
+    if (this.actionLoading) {
+      return;
+    }
+    const stars = Number.parseInt(this.starsText, 10);
+    if (Number.isNaN(stars) || stars < 1 || stars > 5) {
+      promptAction.showToast({ message: '评分请输入 1 到 5 星' });
+      return;
+    }
+    this.actionLoading = true;
+    try {
+      const token = AppStorage.get<string>('accessToken') ?? '';
+      const result = await evaluateOrder(token, this.orderId, stars, this.evaluationComment.trim());
+      if (result.code !== 0) {
+        promptAction.showToast({ message: result.message === '' ? '评价失败，请稍后再试' : result.message });
+        return;
+      }
+      promptAction.showToast({ message: '评价已提交，谢谢反馈' });
+      this.evaluationComment = '';
+    } catch (err) {
+      promptAction.showToast({ message: '连接不上服务，请检查网络' });
+    } finally {
+      this.actionLoading = false;
+    }
+  }
+
   /** 师傅操作区：待上门 → 到场打卡；维修中 → 完工提交。 */
   @Builder
   WorkerActions() {
@@ -99,6 +148,57 @@ struct OrderDetailPage {
         .onClick(() => {
           router.pushUrl({ url: 'pages/WorkerCompletePage', params: { orderId: this.order.id } as CompleteParams });
         })
+    } else if (this.role === 'OWNER' && this.order.status === 'PENDING_CONFIRM') {
+      Row({ space: 10 }) {
+        Button(this.actionLoading ? '处理中' : '验收通过')
+          .layoutWeight(1)
+          .height(46)
+          .borderRadius(23)
+          .backgroundColor(this.C_MOSS)
+          .fontColor(Color.White)
+          .enabled(!this.actionLoading)
+          .onClick(() => { this.onConfirm(true); })
+        Button('申请返工')
+          .layoutWeight(1)
+          .height(46)
+          .borderRadius(23)
+          .backgroundColor(this.C_AMBER)
+          .fontColor(Color.White)
+          .enabled(!this.actionLoading)
+          .onClick(() => { this.onConfirm(false); })
+      }
+      .width('100%')
+      .margin({ top: 14 })
+    } else if (this.role === 'OWNER' && this.order.status === 'COMPLETED') {
+      Column({ space: 8 }) {
+        Text('服务评价')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.C_INK)
+        TextInput({ placeholder: '评分 1-5 星', text: this.starsText })
+          .type(InputType.Number)
+          .height(42)
+          .backgroundColor(Color.White)
+          .onChange((v: string) => { this.starsText = v; })
+        TextArea({ placeholder: '说说本次维修体验（可选）', text: this.evaluationComment })
+          .height(76)
+          .backgroundColor(Color.White)
+          .onChange((v: string) => { this.evaluationComment = v; })
+        Button(this.actionLoading ? '正在提交' : '提交评价')
+          .width('100%')
+          .height(44)
+          .borderRadius(22)
+          .backgroundColor(this.C_INK)
+          .fontColor(Color.White)
+          .enabled(!this.actionLoading)
+          .onClick(() => { this.onEvaluate(); })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(14)
+      .borderRadius(12)
+      .backgroundColor(Color.White)
+      .margin({ top: 14 })
     }
   }
 

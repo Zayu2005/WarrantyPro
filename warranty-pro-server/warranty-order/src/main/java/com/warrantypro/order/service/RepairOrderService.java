@@ -2,6 +2,8 @@ package com.warrantypro.order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warrantypro.common.enums.FaultCategory;
 import com.warrantypro.common.enums.ObjectType;
 import com.warrantypro.common.enums.OrderAction;
@@ -22,12 +24,15 @@ import com.warrantypro.estate.mapper.BuildingMapper;
 import com.warrantypro.estate.mapper.FacilityMapper;
 import com.warrantypro.estate.mapper.HouseMapper;
 import com.warrantypro.order.dto.CreateOrderRequest;
+import com.warrantypro.order.dto.EvaluationRequest;
 import com.warrantypro.order.dto.OrderCreateResponse;
 import com.warrantypro.order.dto.OrderVO;
+import com.warrantypro.order.entity.Evaluation;
 import com.warrantypro.order.entity.OrderFlowRecord;
 import com.warrantypro.order.entity.RepairOrder;
 import com.warrantypro.order.entity.RepairReport;
 import com.warrantypro.order.mapper.OrderFlowRecordMapper;
+import com.warrantypro.order.mapper.EvaluationMapper;
 import com.warrantypro.order.mapper.RepairOrderMapper;
 import com.warrantypro.order.mapper.RepairReportMapper;
 import com.warrantypro.user.entity.UserHouse;
@@ -55,6 +60,7 @@ public class RepairOrderService {
     private static final DateTimeFormatter ORDER_NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final RepairOrderMapper repairOrderMapper;
+    private final EvaluationMapper evaluationMapper;
     private final OrderFlowRecordMapper orderFlowRecordMapper;
     private final RepairReportMapper repairReportMapper;
     private final UserHouseMapper userHouseMapper;
@@ -63,6 +69,7 @@ public class RepairOrderService {
     private final FacilityMapper facilityMapper;
     private final WarrantyVerdictService warrantyVerdictService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     // ==================== 业主端 ====================
 
@@ -293,7 +300,51 @@ public class RepairOrderService {
                 owner.userId(), RoleCode.OWNER.name(),
                 pass ? OrderAction.CONFIRM : OrderAction.REJECT_CONFIRM,
                 pass ? null : reason);
+        if (pass && order.getCurrentWorkerId() != null) {
+            evaluationMapper.incrementCompleted(order.getCurrentWorkerId());
+        }
         return toVO(order, false);
+    }
+
+    /** 完结工单评价：一单一次，评价写入后同步更新师傅评分和完结量。 */
+    @Transactional
+    public void evaluate(LoginUser owner, Long orderId, EvaluationRequest request) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "工单不存在");
+        }
+        if (!owner.userId().equals(order.getOwnerId())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "仅报修人可以评价");
+        }
+        if (!OrderStatus.COMPLETED.name().equals(order.getStatus())) {
+            throw new BizException(ErrorCode.CONFLICT, "仅已完结工单可以评价");
+        }
+        if (order.getCurrentWorkerId() == null) {
+            throw new BizException(ErrorCode.CONFLICT, "工单没有可评价的维修师傅");
+        }
+        long existing = evaluationMapper.selectCount(new LambdaQueryWrapper<Evaluation>()
+                .eq(Evaluation::getOrderId, orderId));
+        if (existing > 0) {
+            throw new BizException(ErrorCode.CONFLICT, "该工单已经评价过了");
+        }
+
+        Evaluation evaluation = new Evaluation();
+        evaluation.setOrderId(orderId);
+        evaluation.setOwnerId(owner.userId());
+        evaluation.setWorkerId(order.getCurrentWorkerId());
+        evaluation.setStars(request.stars());
+        evaluation.setTags(toJson(request.tags()));
+        evaluation.setComment(request.comment() == null ? "" : request.comment().trim());
+        evaluationMapper.insert(evaluation);
+        evaluationMapper.appendRating(order.getCurrentWorkerId(), request.stars());
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value == null ? List.of() : value);
+        } catch (JsonProcessingException e) {
+            throw new BizException(ErrorCode.PARAM_INVALID, "评价标签格式无效");
+        }
     }
 
     // ==================== 内部方法 ====================
