@@ -3,7 +3,6 @@ import request from './request'
 export interface WorkerInfo {
   workerId: number
   realName: string
-  skillTags: string
   todayDuty: boolean
 }
 
@@ -38,6 +37,11 @@ export async function fetchSchedule(start: string, days = 7): Promise<ScheduleRo
 /** 排班切换。 */
 export async function toggleSchedule(workerId: number, dutyDate: string, onDuty: boolean): Promise<void> {
   await request.put('/dispatch/schedule', { workerId, dutyDate, onDuty })
+}
+
+/** 智能一键排班：清空未来 days 天排班，按每日 perDay 人均衡轮转重新生成。 */
+export async function autoGenerateSchedule(days = 30, perDay = 2): Promise<void> {
+  await request.post('/dispatch/schedule/auto-generate', { days, perDay })
 }
 
 /** 派单记录（轮次 / 得分 / 理由）。 */

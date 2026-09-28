@@ -12,9 +12,6 @@ public class CandidateWorker {
 
     private String realName;
 
-    /** 技能标签 JSON 字符串 */
-    private String skillTags;
-
     private Long communityId;
 
     private Integer maxConcurrent;

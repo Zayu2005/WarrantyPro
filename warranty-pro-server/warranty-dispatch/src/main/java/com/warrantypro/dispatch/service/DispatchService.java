@@ -3,7 +3,6 @@ package com.warrantypro.dispatch.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warrantypro.common.event.OrderAcceptedEvent;
-import com.warrantypro.common.enums.FaultCategory;
 import com.warrantypro.common.enums.OrderAction;
 import com.warrantypro.common.enums.OrderStatus;
 import com.warrantypro.common.exception.BizException;
@@ -12,6 +11,7 @@ import com.warrantypro.dispatch.config.DispatchProperties;
 import com.warrantypro.dispatch.entity.AgentDecisionLog;
 import com.warrantypro.dispatch.entity.CandidateWorker;
 import com.warrantypro.dispatch.entity.DispatchRecord;
+import com.warrantypro.dispatch.entity.WorkerSchedule;
 import com.warrantypro.dispatch.mapper.AgentDecisionLogMapper;
 import com.warrantypro.dispatch.mapper.DispatchRecordMapper;
 import com.warrantypro.dispatch.mapper.WorkerProfileMapper;
@@ -32,6 +32,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,9 +42,10 @@ import java.util.Map;
 /**
  * 智能派单服务（docs/03 §5、docs/05 §4）。
  *
- * <p>规则引擎确定性评分：候选过滤（在岗 ∧ 当日排班 ∧ 负载上限，技能不限领域）
- * → 四因子加权（技能 0.4 仅作偏好 / 负载 0.25 / 位置 0.2 / 评分 0.15，权重可配）→ Top1 直派。
- * 派单记录与决策日志全量落库，可解释可审计；LLM 理由生成在接入模型 API 后叠加（迭代 3）。</p>
+ * <p>规则引擎确定性评分：候选过滤（在岗 ∧ 当日排班 ∧ 负载上限，无技能领域限制）
+ * → 三因子加权（负载 0.4 / 位置 0.35 / 评分 0.25，权重可配）→ Top1 直派。
+ * 派单记录与决策日志全量落库，可解释可审计；LLM 理由生成在接入模型 API 后叠加（迭代 3）。
+ * 另提供智能一键排班：按均衡轮转为未来 N 天生成值班表。</p>
  */
 @Slf4j
 @Service
@@ -77,12 +81,11 @@ public class DispatchService {
             return;
         }
         long start = System.currentTimeMillis();
-        FaultCategory category = parseCategory(order.getCategory());
 
         // 1. 候选池：在岗 ∧ 当日排班
         List<CandidateWorker> pool = workerProfileMapper.selectDutyWorkers(LocalDate.now());
 
-        // 2. 负载过滤 + 评分（技能不限领域：任何在班师傅均可接单，技能仅作加分偏好）
+        // 2. 负载过滤 + 三因子评分（无技能领域限制，任何在班师傅均可接单）
         List<Scored> candidates = new ArrayList<>();
         for (CandidateWorker w : pool) {
             if (excludeWorkerId != null && w.getUserId().equals(excludeWorkerId)) {
@@ -96,7 +99,7 @@ public class DispatchService {
             if (inProgress >= max) {
                 continue;
             }
-            candidates.add(score(w, inProgress, max, category, order));
+            candidates.add(score(w, inProgress, max, order));
         }
         candidates.sort((a, b) -> Double.compare(b.score, a.score));
 
@@ -154,12 +157,13 @@ public class DispatchService {
         supersedeCurrent(orderId);
 
         // 回流派单池后走统一派单（排除原师傅）或直派指定师傅
+        Long previousWorkerId = order.getCurrentWorkerId();
         order.setStatus(OrderStatus.PENDING_DISPATCH.name());
         order.setCurrentWorkerId(null);
         repairOrderMapper.updateById(order);
 
         if (newWorkerId == null) {
-            tryDispatch(orderId, nextRound, order.getCurrentWorkerId() == null ? null : order.getCurrentWorkerId(),
+            tryDispatch(orderId, nextRound, previousWorkerId,
                     "人工改派：" + (reason == null ? "" : reason));
             return;
         }
@@ -173,7 +177,7 @@ public class DispatchService {
 
         Scored scored = score(target, 0,
                 target.getMaxConcurrent() == null ? properties.getMaxConcurrent() : target.getMaxConcurrent(),
-                parseCategory(fresh.getCategory()), fresh);
+                fresh);
         fresh.setStatus(OrderStatus.DISPATCHED.name());
         fresh.setCurrentWorkerId(target.getUserId());
         fresh.setDispatchMode("MANUAL");
@@ -216,43 +220,71 @@ public class DispatchService {
         tryDispatch(orderId, nextRound, currentWorker, "师傅到场超时，自动改派");
     }
 
+    /**
+     * 智能一键排班：为未来 days 天生成均衡轮转的值班表（每日 perDay 人，
+     * 各师傅值班天数尽量均衡，轮转起点逐日移动以搭配不同组合）。
+     *
+     * @return 生成的排班条数
+     */
+    @Transactional
+    public int generateSchedule(int days, int perDay) {
+        List<CandidateWorker> workers = workerProfileMapper.selectAllWorkers();
+        if (workers.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_INVALID, "暂无师傅档案，无法生成排班");
+        }
+        int effectiveDays = Math.max(1, Math.min(days, 90));
+        int per = Math.max(1, Math.min(perDay, workers.size()));
+        LocalDate start = LocalDate.now();
+        LocalDate end = start.plusDays(effectiveDays - 1L);
+
+        // 清空区间内旧排班后重新生成
+        workerScheduleMapper.delete(new LambdaQueryWrapper<WorkerSchedule>()
+                .ge(WorkerSchedule::getDutyDate, start)
+                .le(WorkerSchedule::getDutyDate, end));
+
+        Map<Long, Integer> dutyCounts = new HashMap<>();
+        int generated = 0;
+        for (int i = 0; i < effectiveDays; i++) {
+            LocalDate date = start.plusDays(i);
+            List<CandidateWorker> pool = new ArrayList<>(workers);
+            Collections.rotate(pool, i);
+            pool.sort(Comparator.comparingInt(w -> dutyCounts.getOrDefault(w.getUserId(), 0)));
+            for (int k = 0; k < per; k++) {
+                CandidateWorker w = pool.get(k);
+                WorkerSchedule schedule = new WorkerSchedule();
+                schedule.setWorkerId(w.getUserId());
+                schedule.setDutyDate(date);
+                schedule.setShift("FULL");
+                workerScheduleMapper.insert(schedule);
+                dutyCounts.merge(w.getUserId(), 1, Integer::sum);
+                generated++;
+            }
+        }
+        return generated;
+    }
+
     // ==================== 内部方法 ====================
 
-    private Scored score(CandidateWorker w, long inProgress, int max, FaultCategory category, RepairOrder order) {
-        double skill = skillScore(w.getSkillTags(), category);
+    /** 三因子评分：负载空闲 0.4 / 位置就近 0.35 / 历史评分 0.25（技能领域不限）。 */
+    private Scored score(CandidateWorker w, long inProgress, int max, RepairOrder order) {
         double load = Math.max(0.0, 1.0 - (double) inProgress / max);
         double location = w.getCommunityId() != null && w.getCommunityId().equals(order.getCommunityId()) ? 1.0 : 0.4;
         double rating = w.getRatingAvg() == null ? 0.8 : Math.min(w.getRatingAvg().doubleValue(), 5.0) / 5.0;
-        double total = properties.weight("skill") * skill
-                + properties.weight("load") * load
+        double total = properties.weight("load") * load
                 + properties.weight("location") * location
                 + properties.weight("rating") * rating;
         Map<String, Double> factors = new LinkedHashMap<>();
-        factors.put("skill", round3(skill));
         factors.put("load", round3(load));
         factors.put("location", round3(location));
         factors.put("rating", round3(rating));
         return new Scored(w, round3(total), factors, (int) inProgress);
     }
 
-    /** 技能匹配度（仅作评分偏好，不限领域）：精确命中 1.0；水电↔暖通相关 0.6；其他领域 0.3。 */
-    private double skillScore(String tags, FaultCategory category) {
-        if (tags == null) {
-            return 0.3;
-        }
-        if (tags.contains(category.getLabel())) {
-            return 1.0;
-        }
-        boolean related = (category == FaultCategory.WATER_ELECTRICITY && tags.contains("暖通空调"))
-                || (category == FaultCategory.HVAC && tags.contains("水电"));
-        return related ? 0.6 : 0.3;
-    }
-
     private String buildReason(Scored best) {
-        return String.format("%s：技能匹配 %.0f%%，进行中 %d 单，常驻小区%s，历史评分 %s —— 综合得分 %.2f 最高，直接派单",
+        return String.format("%s：进行中 %d 单（负载 %.0f%%），常驻小区%s，历史评分 %s —— 综合得分 %.2f 最高，直接派单",
                 best.worker.getRealName(),
-                best.factors.get("skill") * 100,
                 best.inProgress,
+                best.factors.get("load") * 100,
                 best.factors.get("location") >= 1.0 ? "一致" : "不一致",
                 best.worker.getRatingAvg() == null ? "暂无" : best.worker.getRatingAvg() + "/5",
                 best.score);
@@ -314,14 +346,6 @@ public class DispatchService {
             agentDecisionLogMapper.insert(logEntry);
         } catch (Exception e) {
             log.warn("决策日志写入失败，orderId={}", order.getId(), e);
-        }
-    }
-
-    private FaultCategory parseCategory(String code) {
-        try {
-            return FaultCategory.valueOf(code);
-        } catch (Exception e) {
-            return FaultCategory.OTHER;
         }
     }
 

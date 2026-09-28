@@ -18,9 +18,6 @@ public class WorkerProfile {
 
     private Long userId;
 
-    /** JSON 数组：故障类别标签（FaultCategory label 子集） */
-    private String skillTags;
-
     /** 常驻小区（位置就近因子） */
     private Long communityId;
 

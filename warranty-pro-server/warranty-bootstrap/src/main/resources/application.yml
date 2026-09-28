@@ -14,7 +14,8 @@ spring:
     # 中间件可用 docker compose up -d 一键拉起（见 docker-compose.yml）
     url: jdbc:mysql://localhost:3306/warranty_pro?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: "1234"
+    # 与 docker-compose.yml 保持一致；生产环境通过 WARRANTY_MYSQL_PASSWORD 覆盖
+    password: ${WARRANTY_MYSQL_PASSWORD:root123456}
 
   data:
     redis:
@@ -55,13 +56,12 @@ warranty:
     access-expire-minutes: 120
     refresh-expire-days: 7
 
-  # 智能派单参数（docs/03 §5.1）
+  # 智能派单参数（docs/03 §5.1；技能领域不限，无技能因子）
   dispatch:
     weights:
-      skill: 0.40
-      load: 0.25
-      location: 0.20
-      rating: 0.15
+      load: 0.40
+      location: 0.35
+      rating: 0.25
     accept-timeout-minutes: 15      # 接单超时自动改派
     max-reassign-rounds: 3          # 最大改派轮次
     max-concurrent: 3               # 师傅并发单量上限

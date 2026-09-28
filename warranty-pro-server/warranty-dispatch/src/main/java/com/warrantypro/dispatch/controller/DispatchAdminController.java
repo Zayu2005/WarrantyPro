@@ -60,7 +60,6 @@ public class DispatchAdminController {
             list.add(Map.of(
                     "workerId", w.getUserId(),
                     "realName", w.getRealName(),
-                    "skillTags", w.getSkillTags() == null ? "" : w.getSkillTags(),
                     "todayDuty", todayDuty.contains(w.getUserId())));
         }
         return Result.ok(list);
@@ -105,6 +104,19 @@ public class DispatchAdminController {
         return Result.ok();
     }
 
+    /** 智能一键排班：为未来 days 天生成均衡轮转的值班表。 */
+    @PostMapping("/schedule/auto-generate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Map<String, Object>> autoGenerate(@RequestBody AutoGenerateBody body) {
+        int generated = dispatchService.generateSchedule(
+                body.days == null ? 30 : body.days,
+                body.perDay == null ? 2 : body.perDay);
+        return Result.ok(Map.of(
+                "generated", generated,
+                "days", body.days == null ? 30 : body.days,
+                "perDay", body.perDay == null ? 2 : body.perDay));
+    }
+
     /** 派单记录（轮次 / 得分 / 理由）。 */
     @GetMapping("/orders/{id}/records")
     @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','MANAGER')")
@@ -133,5 +145,13 @@ public class DispatchAdminController {
     public static class ReassignBody {
         private Long workerId;
         private String reason;
+    }
+
+    @Data
+    public static class AutoGenerateBody {
+        /** 生成天数（默认 30，上限 90） */
+        private Integer days;
+        /** 每日值班人数（默认 2） */
+        private Integer perDay;
     }
 }

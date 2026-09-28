@@ -109,9 +109,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         Long owner = createUser("owner", "13800000004", "李雷", "OWNER");
         Long worker2 = createUser("wangqiang", "13800000005", "王强", "WORKER");
 
-        // 师傅画像（技能标签为 FaultCategory 中文口径）+ 今明两天排班
-        insertWorkerProfile(worker1, "[\"水电\",\"土建防水\",\"暖通空调\"]", 4.80);
-        insertWorkerProfile(worker2, "[\"水电\",\"门窗五金\"]", 4.60);
+        // 师傅画像（技能领域不限）+ 今明两天排班
+        insertWorkerProfile(worker1, 4.80);
+        insertWorkerProfile(worker2, 4.60);
         insertSchedules(worker1);
         insertSchedules(worker2);
 
@@ -132,10 +132,9 @@ public class DemoDataInitializer implements CommandLineRunner {
         log.info("演示数据初始化完成：5 个账号（密码 123456）、小区/楼栋/房屋/电梯台账、3 条公告、2 位师傅画像与排班");
     }
 
-    private void insertWorkerProfile(Long userId, String skillTags, double rating) {
+    private void insertWorkerProfile(Long userId, double rating) {
         WorkerProfile profile = new WorkerProfile();
         profile.setUserId(userId);
-        profile.setSkillTags(skillTags);
         profile.setMaxConcurrent(3);
         profile.setOnDuty(1);
         profile.setRatingAvg(java.math.BigDecimal.valueOf(rating));

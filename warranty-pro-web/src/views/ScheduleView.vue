@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { fetchSchedule, fetchWorkers, toggleSchedule } from '@/api/dispatch'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { autoGenerateSchedule, fetchSchedule, fetchWorkers, toggleSchedule } from '@/api/dispatch'
 import type { WorkerInfo } from '@/api/dispatch'
 
 // 排班日历：月历格子展示每日值班师傅，点选日期后在右侧切换值班人
@@ -79,11 +79,22 @@ async function onToggle(worker: WorkerInfo, date: string, checked: boolean) {
   }
 }
 
-function skillList(tags: string): string[] {
+async function onAutoGenerate() {
   try {
-    return JSON.parse(tags) as string[]
+    await ElMessageBox.confirm(
+      '将清空未来 30 天的现有排班，按「每日 2 人」均衡轮转重新生成，确认执行？',
+      '智能一键排班',
+      { confirmButtonText: '生成排班', cancelButtonText: '取消', type: 'warning' },
+    )
   } catch {
-    return []
+    return
+  }
+  try {
+    await autoGenerateSchedule(30, 2)
+    ElMessage.success('已生成未来 30 天的均衡排班')
+    await load()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '生成失败')
   }
 }
 
@@ -100,9 +111,12 @@ onMounted(load)
           <span class="cal-title">{{ monthLabel }}</span>
           <el-button size="small" circle @click="shiftMonth(1)">›</el-button>
         </div>
-        <el-button size="small" text type="primary" @click="current = new Date(); selected = fmt(new Date()); load()">
-          回到本月
-        </el-button>
+        <div class="cal-actions">
+          <el-button size="small" text type="primary" @click="current = new Date(); selected = fmt(new Date()); load()">
+            回到本月
+          </el-button>
+          <el-button type="primary" size="small" @click="onAutoGenerate">智能一键排班</el-button>
+        </div>
       </div>
 
       <div class="cal-grid">
@@ -129,12 +143,7 @@ onMounted(load)
       <p class="duty-note">切换开关即保存；派单候选 = 在岗 ∧ 当日排班（不限技能领域）</p>
       <div v-if="workers.length === 0" class="duty-empty" v-loading="loading">暂无师傅档案</div>
       <div v-for="w in workers" :key="w.workerId" class="duty-row">
-        <div class="duty-worker">
-          <span class="duty-name">{{ w.realName }}</span>
-          <el-tag v-for="t in skillList(w.skillTags)" :key="t" size="small" effect="plain" class="duty-tag">
-            {{ t }}
-          </el-tag>
-        </div>
+        <span class="duty-name">{{ w.realName }}</span>
         <el-switch
           :model-value="dutySet.has(key(w.workerId, selected))"
           @change="(v: boolean | string | number) => onToggle(w, selected, Boolean(v))"

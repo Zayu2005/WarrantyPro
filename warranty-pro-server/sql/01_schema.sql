@@ -261,7 +261,6 @@ CREATE TABLE dispatch_record (
 CREATE TABLE worker_profile (
   id              BIGINT UNSIGNED AUTO_INCREMENT COMMENT '主键',
   user_id         BIGINT UNSIGNED NOT NULL COMMENT '师傅用户 ID（sys_user.id，一对一）',
-  skill_tags      JSON            NULL COMMENT '技能标签数组（FaultCategory 子集）',
   community_id    BIGINT UNSIGNED NULL COMMENT '常驻小区（位置就近因子）',
   max_concurrent  INT             NOT NULL DEFAULT 3 COMMENT '并发单量上限',
   on_duty         TINYINT         NOT NULL DEFAULT 1 COMMENT '在岗开关：1 在岗 / 0 请假',

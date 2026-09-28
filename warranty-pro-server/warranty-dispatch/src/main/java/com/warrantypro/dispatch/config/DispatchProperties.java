@@ -12,9 +12,9 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "warranty.dispatch")
 public class DispatchProperties {
 
-    /** 四因子权重 */
+    /** 三因子权重（技能领域不限，不设技能因子） */
     private Map<String, Double> weights = Map.of(
-            "skill", 0.40, "load", 0.25, "location", 0.20, "rating", 0.15);
+            "load", 0.40, "location", 0.35, "rating", 0.25);
 
     /** 到场超时（小时），超时触发自动改派 */
     private int arriveTimeoutHours = 4;

@@ -177,6 +177,27 @@ async function postJSON(path: string, body: object, token: string): Promise<stri
   }
 }
 
+async function putJSON(path: string, body: object, token: string): Promise<string> {
+  const client = http.createHttp();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+  try {
+    const resp = await client.request(`${ApiConfig.BASE_URL}${path}`, {
+      method: http.RequestMethod.PUT,
+      header: headers,
+      extraData: JSON.stringify(body),
+      expectDataType: http.HttpDataType.STRING,
+      connectTimeout: 8000,
+      readTimeout: 8000
+    });
+    return resp.result as string;
+  } finally {
+    client.destroy();
+  }
+}
+
 /** 用户名密码登录（POST /api/v1/auth/login）。 */
 export async function loginByPassword(username: string, password: string): Promise<ApiResult> {
   const body: LoginBody = new LoginBody();
@@ -257,7 +278,7 @@ export async function updateProfile(token: string, realName: string, phone: stri
   const body: UpdateProfileBody = new UpdateProfileBody();
   body.realName = realName;
   body.phone = phone;
-  return JSON.parse(await postJSON('/api/v1/users/me', body, token)) as WorkerActionResult;
+  return JSON.parse(await putJSON('/api/v1/users/me', body, token)) as WorkerActionResult;
 }
 
 /** 修改密码（PUT /api/v1/users/me/password）。 */
@@ -266,7 +287,7 @@ export async function changePassword(token: string, oldPassword: string,
   const body: ChangePasswordBody = new ChangePasswordBody();
   body.oldPassword = oldPassword;
   body.newPassword = newPassword;
-  return JSON.parse(await postJSON('/api/v1/users/me/password', body, token)) as WorkerActionResult;
+  return JSON.parse(await putJSON('/api/v1/users/me/password', body, token)) as WorkerActionResult;
 }
 
 /** 师傅完工提交（POST /api/v1/worker/orders/{id}/complete）。 */
