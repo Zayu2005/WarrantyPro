@@ -40,6 +40,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '师傅排班', requiresAuth: true },
       },
       {
+        path: 'agent-workflow',
+        name: 'agentWorkflow',
+        component: () => import('@/views/WorkflowView.vue'),
+        meta: { title: '智能体工作流', requiresAuth: true },
+      },
+      {
         path: 'warranty-ledger',
         name: 'warrantyLedger',
         component: () => import('@/views/PlaceholderView.vue'),

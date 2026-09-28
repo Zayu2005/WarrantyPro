@@ -11,12 +11,41 @@
 
     <artifactId>warranty-agent</artifactId>
     <name>warranty-agent</name>
-    <description>AI Agent 服务层：小保对话 / 智能派单 / 维修辅助 / 运营分析，Spring AI + Function Calling + RAG + 降级控制（docs/05）</description>
+    <description>AI Agent 服务层：LangChain4j 工作流、小保报修 / 维修辅助 / 运营分析与可观测日志（docs/05）</description>
 
     <dependencies>
         <dependency>
             <groupId>com.warrantypro</groupId>
             <artifactId>warranty-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

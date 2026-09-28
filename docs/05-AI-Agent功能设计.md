@@ -22,7 +22,7 @@ flowchart TB
         A4["Agent ④ 运营分析<br/>自然语言查数 + 周报"]
     end
     subgraph 底座
-        ORCH["编排层（Spring AI ChatClient）<br/>系统提示词 · 会话记忆 · 工具注册"]
+        ORCH["编排层（LangChain4j ChatLanguageModel）<br/>系统提示词 · 会话记忆 · 工具注册"]
         TOOL["工具层（Function Calling）<br/>工具内二次 RBAC 校验"]
         RAGP["RAG 管道<br/>知识库 / 历史工单向量检索"]
     end
@@ -52,15 +52,19 @@ flowchart TB
 
 ---
 
-## 2. 技术底座落地（Spring AI）
+## 2. 技术底座落地（LangChain4j）
 
-| 能力 | Spring AI 组件 | 本项目用法 |
+当前已落地的第一条工作流是“报修分诊工作流”（`REPAIR_TRIAGE_V1`）。它在 `warranty-agent` 模块中使用 LangChain4j `OpenAiChatModel`，通过 OpenAI 兼容的 `base-url`、模型名和 `WARRANTY_AI_API_KEY` 配置供应商。工作流运行记录写入 `agent_workflow_run`，每个节点的输入摘要、输出摘要、模型、状态和耗时写入 `agent_workflow_node_log`。模型不可用时，分类和方案节点使用规则降级，工作流仍会输出可供人工处理的结果。
+
+管理员后台的“智能体工作流”页面通过 `/api/v1/agent/workflows/definition` 获取节点图，通过运行记录和日志接口轮询显示当前节点状态与动态调用日志；页面也可直接启动一次报修分诊运行。真实 RAG、对话式 Agent 和 SSE 推送保留在后续迭代。
+
+| 能力 | LangChain4j / 应用组件 | 本项目用法 |
 |------|---------------|-----------|
-| 模型对话 | `ChatClient` | 统一入口，通过 OpenAI 兼容协议配置智谱 GLM-4V / DeepSeek，`spring.ai.openai.base-url` 一键切换 |
-| 工具调用 | `@Tool` / ToolCallback | §1 各工具注册；模型返回的调用参数经 JSON Schema 校验后执行 |
-| 流式输出 | `stream()` + SseEmitter | 小保对话逐 token 推送 |
-| RAG | `VectorStore`（Redis Stack）+ `EmbeddingModel` | 知识库 / 历史工单向量检索 |
-| 会话记忆 | ChatMemory（Redis 存储） | 滑动窗口保留最近 10 轮，超窗摘要压缩 |
+| 模型对话 | `OpenAiChatModel` / `ChatLanguageModel` | 通过 `warranty.ai.base-url`、`warranty.ai.model` 和 `WARRANTY_AI_API_KEY` 调用 OpenAI 兼容模型 |
+| 工具调用 | `@Tool` / ToolProvider | §1 各工具注册；模型返回的调用参数经 JSON Schema 校验后执行 |
+| 流式输出 | `StreamingChatLanguageModel` + SseEmitter | 小保对话逐 token 推送（后续迭代） |
+| RAG | `EmbeddingModel` + Redis 向量存储 | 知识库 / 历史工单向量检索（后续迭代） |
+| 会话记忆 | LangChain4j `ChatMemory` | 滑动窗口保留最近 10 轮，超窗摘要压缩（后续迭代） |
 
 ---
 
@@ -228,7 +232,7 @@ flowchart LR
 | 语料来源 | ① 自助排障知识（管理员维护，FR-A-06）；② 维修知识文档（水电 / 防水 / 门窗等类别）；③ 历史完结工单维修记录（结构化转文本，T+1 入库） |
 | 切片策略 | 按知识条目自然分块（500 字 / 50 字重叠）；维修记录以单工单为单元 |
 | 嵌入模型 | 国产嵌入 API（智谱 embedding-3 / bge-m3，随主模型供应商配置） |
-| 向量存储 | Redis Stack（Spring AI RedisVectorStore），按 `doc_type`（KB / ORDER）+ `category` 元数据过滤 |
+| 向量存储 | Redis Stack（预留 LangChain4j 集成），按 `doc_type`（KB / ORDER）+ `category` 元数据过滤 |
 | 检索策略 | 混合检索：向量 Top5 + 类别过滤；演示阶段不引入重排模型（预留 bge-reranker 接口） |
 | 更新机制 | 知识编辑后异步重新嵌入；无效文档软删除 |
 

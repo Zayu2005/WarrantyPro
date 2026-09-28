@@ -14,7 +14,7 @@
 | 角色 | OWNER 业主 · WORKER 维修师傅 · DISPATCHER 物业客服 · MANAGER 管理层 · ADMIN 系统管理员 |
 | 核心业务 | 报修（对话式 / 表单）→ 智能派单 → 维修 → 验收评价 → 数据沉淀 |
 | AI Agent | ①小保·对话报修助手 ②智能派单（可解释）③维修辅助 ④运营分析 |
-| 技术栈 | Spring Boot 3.3+（Java 21）· MyBatis-Plus · MySQL 8 · Redis Stack · MinIO · Spring AI · Vue3 + Element Plus · ArkTS（HarmonyOS NEXT）|
+| 技术栈 | Spring Boot 3.3+（Java 21）· MyBatis-Plus · MySQL 8 · Redis Stack · MinIO · LangChain4j · Vue3 + Element Plus · ArkTS（HarmonyOS NEXT）|
 | 部署 | Docker Compose 一键拉起（Nginx + 后端 + MySQL + Redis Stack + MinIO）|
 
 ## 文档导航
