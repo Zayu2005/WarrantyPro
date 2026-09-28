@@ -1,6 +1,7 @@
 package com.warrantypro.dispatch.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.warrantypro.common.event.OrderAcceptedEvent;
 import com.warrantypro.common.enums.OrderAction;
@@ -85,7 +86,7 @@ public class DispatchService {
         // 1. 候选池：在岗 ∧ 当日排班
         List<CandidateWorker> pool = workerProfileMapper.selectDutyWorkers(LocalDate.now());
 
-        // 2. 负载过滤 + 三因子评分（无技能领域限制，任何在班师傅均可接单）
+        // 2. 负载过滤 + 三因子评分（不设技能领域限制；派单后师傅直接到场）
         List<Scored> candidates = new ArrayList<>();
         for (CandidateWorker w : pool) {
             if (excludeWorkerId != null && w.getUserId().equals(excludeWorkerId)) {
@@ -110,11 +111,19 @@ public class DispatchService {
 
         // 3. Top1 直派
         Scored best = candidates.get(0);
-        order.setStatus(OrderStatus.DISPATCHED.name());
-        order.setCurrentWorkerId(best.worker.getUserId());
-        order.setDispatchMode("AUTO");
-        order.setAcceptDeadline(LocalDateTime.now().plusHours(properties.getArriveTimeoutHours()));
-        repairOrderMapper.updateById(order);
+        LocalDateTime dispatchedAt = LocalDateTime.now();
+        LocalDateTime acceptDeadline = dispatchedAt.plusHours(properties.getArriveTimeoutHours());
+        int updated = repairOrderMapper.update(null, new UpdateWrapper<RepairOrder>()
+                .eq("id", orderId)
+                .eq("status", OrderStatus.PENDING_DISPATCH.name())
+                .set("status", OrderStatus.DISPATCHED.name())
+                .set("current_worker_id", best.worker.getUserId())
+                .set("dispatch_mode", "AUTO")
+                .set("dispatched_at", dispatchedAt)
+                .set("accept_deadline", acceptDeadline));
+        if (updated == 0) {
+            return;
+        }
 
         DispatchRecord record = new DispatchRecord();
         record.setOrderId(order.getId());
@@ -138,6 +147,63 @@ public class DispatchService {
                 .toList();
         logDecision(order, round, trigger, candidateSummary, best.worker.getUserId(),
                 record.getReason(), "OK", start);
+    }
+
+    /** 待派单工单无自动候选或客服决定人工处理时，直接指定今日在班且未超载的师傅。 */
+    @Transactional
+    public void dispatchPendingManual(Long orderId, Long workerId, String reason, Long operatorId) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "工单不存在");
+        }
+        if (!OrderStatus.PENDING_DISPATCH.name().equals(order.getStatus())) {
+            throw new BizException(ErrorCode.CONFLICT, "仅待派单状态的工单可以人工派单");
+        }
+        if (workerId == null) {
+            throw new BizException(ErrorCode.PARAM_INVALID, "请选择维修师傅");
+        }
+
+        CandidateWorker worker = workerProfileMapper.selectDutyWorkers(LocalDate.now()).stream()
+                .filter(candidate -> workerId.equals(candidate.getUserId()))
+                .findFirst()
+                .orElseThrow(() -> new BizException(ErrorCode.PARAM_INVALID, "目标师傅今日不在班，无法派单"));
+        long inProgress = repairOrderMapper.selectCount(new LambdaQueryWrapper<RepairOrder>()
+                .eq(RepairOrder::getCurrentWorkerId, workerId)
+                .in(RepairOrder::getStatus, OrderStatus.DISPATCHED.name(), OrderStatus.IN_PROGRESS.name()));
+        int max = worker.getMaxConcurrent() == null ? properties.getMaxConcurrent() : worker.getMaxConcurrent();
+        if (inProgress >= max) {
+            throw new BizException(ErrorCode.CONFLICT, "目标师傅当前工单已达并发上限");
+        }
+
+        Scored scored = score(worker, inProgress, max, order);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime deadline = now.plusHours(properties.getArriveTimeoutHours());
+        int updated = repairOrderMapper.update(null, new UpdateWrapper<RepairOrder>()
+                .eq("id", orderId)
+                .eq("status", OrderStatus.PENDING_DISPATCH.name())
+                .set("status", OrderStatus.DISPATCHED.name())
+                .set("current_worker_id", workerId)
+                .set("dispatch_mode", "MANUAL")
+                .set("dispatched_at", now)
+                .set("accept_deadline", deadline));
+        if (updated == 0) {
+            throw new BizException(ErrorCode.CONFLICT, "工单状态已变化，请刷新后重试");
+        }
+
+        DispatchRecord record = new DispatchRecord();
+        record.setOrderId(orderId);
+        record.setWorkerId(workerId);
+        record.setMode("MANUAL");
+        record.setScore(BigDecimal.valueOf(scored.score).setScale(3, RoundingMode.HALF_UP));
+        record.setFactors(toJson(scored.factors));
+        record.setReason("人工派单：" + (reason == null ? "" : reason));
+        record.setStatus("DISPATCHED");
+        record.setRoundNo(nextRound(orderId));
+        record.setDispatchedBy(operatorId);
+        record.setRejectReason(reason);
+        dispatchRecordMapper.insert(record);
+        recordFlow(orderId, OrderStatus.PENDING_DISPATCH, OrderStatus.DISPATCHED,
+                OrderAction.DISPATCH, record.getReason());
     }
 
     /** 人工改派（客服指定师傅）或人工触发自动改派（workerId 为空时按评分重派并排除原师傅）。 */
@@ -178,11 +244,19 @@ public class DispatchService {
         Scored scored = score(target, 0,
                 target.getMaxConcurrent() == null ? properties.getMaxConcurrent() : target.getMaxConcurrent(),
                 fresh);
-        fresh.setStatus(OrderStatus.DISPATCHED.name());
-        fresh.setCurrentWorkerId(target.getUserId());
-        fresh.setDispatchMode("MANUAL");
-        fresh.setAcceptDeadline(LocalDateTime.now().plusHours(properties.getArriveTimeoutHours()));
-        repairOrderMapper.updateById(fresh);
+        LocalDateTime dispatchedAt = LocalDateTime.now();
+        LocalDateTime acceptDeadline = dispatchedAt.plusHours(properties.getArriveTimeoutHours());
+        int updated = repairOrderMapper.update(null, new UpdateWrapper<RepairOrder>()
+                .eq("id", orderId)
+                .eq("status", OrderStatus.PENDING_DISPATCH.name())
+                .set("status", OrderStatus.DISPATCHED.name())
+                .set("current_worker_id", target.getUserId())
+                .set("dispatch_mode", "MANUAL")
+                .set("dispatched_at", dispatchedAt)
+                .set("accept_deadline", acceptDeadline));
+        if (updated == 0) {
+            throw new BizException(ErrorCode.CONFLICT, "工单状态已变化，请刷新后重试");
+        }
 
         DispatchRecord record = new DispatchRecord();
         record.setOrderId(orderId);

@@ -155,7 +155,7 @@ export struct ProfilePage {
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(this.C_AMBER)
-              Text('待接单')
+              Text('待上门')
                 .fontSize(11)
                 .fontColor(this.C_MUTED)
             }

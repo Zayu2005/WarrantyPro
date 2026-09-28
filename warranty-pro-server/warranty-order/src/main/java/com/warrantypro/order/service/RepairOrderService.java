@@ -1,6 +1,7 @@
 package com.warrantypro.order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -166,7 +167,7 @@ public class RepairOrderService {
 
     // ==================== 师傅端 ====================
 
-    /** 师傅工单：默认待办（待接单 + 维修中）；history=true 时含已完结（订单 Tab 历史）。 */
+    /** 师傅工单：默认待办（已派待上门 + 维修中）；history=true 时含已完结（订单 Tab 历史）。 */
     public PageResult<OrderVO> workerOrders(LoginUser worker, boolean history, long page, long pageSize) {
         LambdaQueryWrapper<RepairOrder> wrapper = new LambdaQueryWrapper<RepairOrder>()
                 .eq(RepairOrder::getCurrentWorkerId, worker.userId())
@@ -293,9 +294,17 @@ public class RepairOrderService {
             throw new BizException(ErrorCode.CONFLICT, "仅待验收状态的工单可以验收");
         }
         OrderStatus target = pass ? OrderStatus.COMPLETED : OrderStatus.IN_PROGRESS;
+        LocalDateTime now = LocalDateTime.now();
+        int updated = repairOrderMapper.update(null, new UpdateWrapper<RepairOrder>()
+                .eq("id", orderId)
+                .eq("status", OrderStatus.PENDING_CONFIRM.name())
+                .set("status", target.name())
+                .set("confirmed_at", now));
+        if (updated == 0) {
+            throw new BizException(ErrorCode.CONFLICT, "工单状态已变化，请刷新后重试");
+        }
         order.setStatus(target.name());
-        order.setConfirmedAt(LocalDateTime.now());
-        repairOrderMapper.updateById(order);
+        order.setConfirmedAt(now);
 
         recordFlow(order.getId(), OrderStatus.PENDING_CONFIRM, target,
                 owner.userId(), RoleCode.OWNER.name(),
@@ -305,6 +314,34 @@ public class RepairOrderService {
             evaluationMapper.incrementCompleted(order.getCurrentWorkerId());
         }
         return toVO(order, false);
+    }
+
+    /** 超过验收时限后系统默认通过；条件更新避免与业主同时验收时重复写入流转记录。 */
+    @Transactional
+    public boolean autoConfirmExpired(Long orderId, LocalDateTime deadline) {
+        RepairOrder order = repairOrderMapper.selectById(orderId);
+        if (order == null || !OrderStatus.PENDING_CONFIRM.name().equals(order.getStatus())
+                || order.getCompletedAt() == null || order.getCompletedAt().isAfter(deadline)) {
+            return false;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        int updated = repairOrderMapper.update(null, new UpdateWrapper<RepairOrder>()
+                .eq("id", orderId)
+                .eq("status", OrderStatus.PENDING_CONFIRM.name())
+                .le("completed_at", deadline)
+                .set("status", OrderStatus.COMPLETED.name())
+                .set("confirmed_at", now));
+        if (updated == 0) {
+            return false;
+        }
+
+        recordFlow(orderId, OrderStatus.PENDING_CONFIRM, OrderStatus.COMPLETED,
+                null, null, OrderAction.CONFIRM, "业主超过验收时限未操作，系统自动验收通过");
+        if (order.getCurrentWorkerId() != null) {
+            evaluationMapper.incrementCompleted(order.getCurrentWorkerId());
+        }
+        return true;
     }
 
     /** 完结工单评价：一单一次，评价写入后同步更新师傅评分和完结量。 */

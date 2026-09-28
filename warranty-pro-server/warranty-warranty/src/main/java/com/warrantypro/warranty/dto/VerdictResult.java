@@ -15,7 +15,7 @@ public record VerdictResult(
         String basis,
         LocalDate warrantyStart,
         LocalDate warrantyExpire,
-        /** 受理后的路由目标状态：EXTERNAL_PROCESSING（保修期内）/ PENDING_DISPATCH（保修期外） */
+        /** 旧客户端兼容字段；新工单始终由客服受理后进入统一派单流程。 */
         OrderStatus routeTo
 ) {
 }

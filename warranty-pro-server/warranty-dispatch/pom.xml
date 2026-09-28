@@ -11,7 +11,7 @@
 
     <artifactId>warranty-dispatch</artifactId>
     <name>warranty-dispatch</name>
-    <description>派单服务：候选过滤 + 多因子加权评分（技能0.4/负载0.25/位置0.2/评分0.15）+ Agent 决策接入（docs/03 §5、docs/05 §4）</description>
+    <description>派单服务：候选过滤 + 三因子加权评分（负载0.4/位置0.35/评分0.25）+ Agent 决策接入（docs/03 §5、docs/05 §4）</description>
 
     <dependencies>
         <dependency>

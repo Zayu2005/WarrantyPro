@@ -27,11 +27,10 @@ INSERT INTO warranty_rule (scope, part_category, duration_value, duration_unit, 
 
 -- ---------------- 3. 系统参数缺省值（FR-A-08，管理员可在 PC 端修改） ----------------
 INSERT INTO sys_config (config_key, config_value, remark) VALUES
-  ('dispatch.weights.skill',                    '0.40', '派单权重：技能匹配度'),
   ('dispatch.weights.load',                     '0.25', '派单权重：负载空闲度'),
   ('dispatch.weights.location',                 '0.20', '派单权重：位置就近度'),
   ('dispatch.weights.rating',                   '0.15', '派单权重：历史评分'),
-  ('dispatch.accept-timeout-minutes',           '15',   '师傅接单超时（分钟），超时自动改派'),
+  ('dispatch.accept-timeout-minutes',           '15',   '历史兼容参数，当前按派单后到场时限改派'),
   ('dispatch.max-reassign-rounds',              '3',    '自动改派最大轮次，超限告警客服人工介入'),
   ('dispatch.auto-dispatch-timeout-minutes',    '15',   '客服超时未处理（分钟）转自动派单'),
   ('dispatch.max-concurrent',                   '3',    '师傅并发在办单量上限'),

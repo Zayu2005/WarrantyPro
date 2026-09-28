@@ -2,7 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/api/request'
-import { acceptOrder, fetchDispatchRecords, fetchWorkers, reassignOrder } from '@/api/dispatch'
+import { acceptOrder, dispatchPendingOrder, fetchDispatchRecords, fetchWorkers, reassignOrder } from '@/api/dispatch'
 import type { DispatchRecord, WorkerInfo } from '@/api/dispatch'
 import { categoryLabel, statusLabel, statusTagType } from '@/utils/labels'
 
@@ -83,9 +83,11 @@ const reassignOrderRow = ref<OrderRow | null>(null)
 const reassignForm = reactive({ workerId: null as number | null, reason: '' })
 const workers = ref<WorkerInfo[]>([])
 const smartReassign = ref(false)
+const pendingDispatch = ref(false)
 
 async function showReassign(row: OrderRow) {
   reassignOrderRow.value = row
+  pendingDispatch.value = row.status === 'PENDING_DISPATCH'
   reassignForm.workerId = null
   reassignForm.reason = ''
   smartReassign.value = false
@@ -99,13 +101,18 @@ async function showReassign(row: OrderRow) {
 
 async function submitReassign() {
   if (!reassignOrderRow.value) return
-  if (!smartReassign.value && reassignForm.workerId === null) {
-    ElMessage.warning('请选择接手的师傅，或勾选智能重派')
+  if ((!smartReassign.value || pendingDispatch.value) && reassignForm.workerId === null) {
+    ElMessage.warning(pendingDispatch.value ? '请选择派单师傅' : '请选择接手的师傅，或勾选智能重派')
     return
   }
   try {
-    await reassignOrder(reassignOrderRow.value.id, smartReassign.value ? null : reassignForm.workerId, reassignForm.reason)
-    ElMessage.success('改派完成')
+    if (pendingDispatch.value) {
+      await dispatchPendingOrder(reassignOrderRow.value.id, reassignForm.workerId!, reassignForm.reason)
+      ElMessage.success('人工派单完成')
+    } else {
+      await reassignOrder(reassignOrderRow.value.id, smartReassign.value ? null : reassignForm.workerId, reassignForm.reason)
+      ElMessage.success('改派完成')
+    }
     reassignVisible.value = false
     await load()
   } catch (e) {
@@ -152,10 +159,13 @@ onMounted(load)
         </template>
       </el-table-column>
       <el-table-column prop="submittedAt" label="提交时间" width="160" />
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="250" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.status === 'SUBMITTED'" type="primary" size="small" @click="onAccept(row)">
             受理并直派
+          </el-button>
+          <el-button v-if="row.status === 'PENDING_DISPATCH'" type="primary" size="small" @click="showReassign(row)">
+            人工派单
           </el-button>
           <el-button size="small" @click="showRecords(row)">派单记录</el-button>
           <el-button v-if="row.status === 'DISPATCHED'" size="small" @click="showReassign(row)">改派</el-button>
@@ -191,12 +201,12 @@ onMounted(load)
     </el-dialog>
 
     <!-- 人工改派 -->
-    <el-dialog v-model="reassignVisible" title="人工改派" width="440px">
+    <el-dialog v-model="reassignVisible" :title="pendingDispatch ? '人工派单' : '人工改派'" width="440px">
       <el-form label-width="90px">
-        <el-form-item label="改派方式">
+        <el-form-item v-if="!pendingDispatch" label="改派方式">
           <el-checkbox v-model="smartReassign">智能重派（排除原师傅）</el-checkbox>
         </el-form-item>
-        <el-form-item v-if="!smartReassign" label="接手师傅">
+        <el-form-item v-if="pendingDispatch || !smartReassign" label="接手师傅">
           <el-select v-model="reassignForm.workerId" placeholder="仅当日排班的师傅" style="width: 100%">
             <el-option v-for="w in workers" :key="w.workerId" :label="w.realName" :value="w.workerId" />
           </el-select>
@@ -207,7 +217,7 @@ onMounted(load)
       </el-form>
       <template #footer>
         <el-button @click="reassignVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitReassign">确认改派</el-button>
+        <el-button type="primary" @click="submitReassign">{{ pendingDispatch ? '确认派单' : '确认改派' }}</el-button>
       </template>
     </el-dialog>
   </div>

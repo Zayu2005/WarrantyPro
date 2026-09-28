@@ -62,7 +62,7 @@ warranty:
       load: 0.40
       location: 0.35
       rating: 0.25
-    accept-timeout-minutes: 15      # 接单超时自动改派
+    accept-timeout-minutes: 15      # 历史兼容参数；当前使用到场超时改派
     max-reassign-rounds: 3          # 最大改派轮次
     max-concurrent: 3               # 师傅并发单量上限
     auto-dispatch-timeout-minutes: 15  # 客服超时未处理转自动派单
@@ -76,6 +76,7 @@ warranty:
   # 验收超时默认通过（docs/03 §8）
   confirm:
     auto-pass-hours: 48
+    scan-ms: 60000
 
   # AI Agent（docs/05；OpenAI 兼容协议，供应商可配置切换）
   ai:

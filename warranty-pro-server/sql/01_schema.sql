@@ -245,7 +245,7 @@ CREATE TABLE dispatch_record (
   worker_id     BIGINT UNSIGNED NOT NULL COMMENT '承接师傅（sys_user.id）',
   mode          VARCHAR(20)     NOT NULL COMMENT '派单模式：AUTO / RECOMMEND / MANUAL',
   score         DECIMAL(4, 3)   NULL COMMENT '多因子综合得分',
-  factors       JSON            NULL COMMENT '四因子得分明细（skill/load/location/rating）',
+  factors       JSON            NULL COMMENT '三因子得分明细（load/location/rating）',
   reason        VARCHAR(500)    NULL COMMENT 'Agent 推荐理由（自然语言）',
   status        VARCHAR(20)     NOT NULL DEFAULT 'DISPATCHED' COMMENT 'DISPATCHED 已派单生效中 / SUPERSEDED 被改派替代（迭代 2：无接单环节）',
   round_no      INT             NOT NULL DEFAULT 1 COMMENT '第几轮派单（自动改派轮次，上限 3）',
@@ -425,7 +425,7 @@ CREATE TABLE operation_log (
 
 CREATE TABLE sys_config (
   id           BIGINT UNSIGNED AUTO_INCREMENT COMMENT '主键',
-  config_key   VARCHAR(100) NOT NULL COMMENT '参数键，如 dispatch.weights.skill',
+  config_key   VARCHAR(100) NOT NULL COMMENT '参数键，如 dispatch.weights.load',
   config_value VARCHAR(500) NOT NULL DEFAULT '' COMMENT '参数值',
   remark       VARCHAR(200) NULL COMMENT '说明',
   updated_by   BIGINT UNSIGNED NULL COMMENT '最后修改人（sys_user.id）',

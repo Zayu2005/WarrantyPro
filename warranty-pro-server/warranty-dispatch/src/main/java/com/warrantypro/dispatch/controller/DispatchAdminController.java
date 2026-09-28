@@ -52,8 +52,8 @@ public class DispatchAdminController {
     @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','MANAGER')")
     public Result<List<Map<String, Object>>> workers() {
         LocalDate today = LocalDate.now();
-        Set<Long> todayDuty = workerScheduleMapper.selectRange(today, today).stream()
-                .map(WorkerSchedule::getWorkerId)
+        Set<Long> todayDuty = workerProfileMapper.selectDutyWorkers(today).stream()
+                .map(CandidateWorker::getUserId)
                 .collect(Collectors.toSet());
         List<Map<String, Object>> list = new ArrayList<>();
         for (CandidateWorker w : workerProfileMapper.selectAllWorkers()) {
@@ -134,6 +134,16 @@ public class DispatchAdminController {
         return Result.ok();
     }
 
+    /** 待派单工单人工指定在班师傅，供自动派单无候选时客服兜底处理。 */
+    @PostMapping("/orders/{id}/dispatch")
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
+    public Result<Void> dispatchPending(@AuthenticationPrincipal LoginUser operator,
+                                        @PathVariable Long id,
+                                        @RequestBody ManualDispatchBody body) {
+        dispatchService.dispatchPendingManual(id, body.workerId, body.reason, operator.userId());
+        return Result.ok();
+    }
+
     @Data
     public static class ScheduleToggle {
         private Long workerId;
@@ -143,6 +153,12 @@ public class DispatchAdminController {
 
     @Data
     public static class ReassignBody {
+        private Long workerId;
+        private String reason;
+    }
+
+    @Data
+    public static class ManualDispatchBody {
         private Long workerId;
         private String reason;
     }

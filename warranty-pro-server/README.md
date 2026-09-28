@@ -35,8 +35,8 @@ java -jar warranty-bootstrap/target/warranty-bootstrap.jar
 # 或 mvn spring-boot:run -pl warranty-bootstrap
 ```
 
-## 实施阶段待补
+## 当前实现状态
 
-- 各业务模块的实体 / Mapper / Service / Controller（表结构见 docs/06，接口契约见 docs/07）；
-- warranty-auth 引入 spring-boot-starter-security 与 jjwt（版本已在父 POM dependencyManagement 锁定）；
-- warranty-agent 引入 spring-ai-starter-model-openai（BOM 已锁定 1.0.0）与 Redis 向量库配置。
+- 已实现登录鉴权、报修与工单流转、自动 / 人工派单、排班、验收评价和运营概览；
+- 到场超时自动改派、验收超时默认通过由定时任务处理；
+- 文件上传、站内通知、Agent 对话与知识库能力仍待后续迭代。

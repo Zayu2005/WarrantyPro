@@ -25,7 +25,7 @@ public class DispatchRecord {
 
     private BigDecimal score;
 
-    /** 四因子得分明细 JSON（skill/load/location/rating） */
+    /** 三因子得分明细 JSON（load/location/rating） */
     private String factors;
 
     private String reason;

@@ -54,6 +54,11 @@ export async function reassignOrder(orderId: number, workerId: number | null, re
   await request.post(`/dispatch/orders/${orderId}/reassign`, { workerId, reason })
 }
 
+/** 为待派单工单人工指定师傅。 */
+export async function dispatchPendingOrder(orderId: number, workerId: number, reason: string): Promise<void> {
+  await request.post(`/dispatch/orders/${orderId}/dispatch`, { workerId, reason })
+}
+
 /** 受理工单（受理后智能体同步直派）。 */
 export async function acceptOrder(orderId: number): Promise<void> {
   await request.post(`/dispatch/orders/${orderId}/accept`)
