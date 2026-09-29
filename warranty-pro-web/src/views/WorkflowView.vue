@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Share } from '@element-plus/icons-vue'
 import { fetchWorkflowDefinition, fetchWorkflowLogs, fetchWorkflowRuns, startRepairWorkflow } from '@/api/workflow'
 import type { WorkflowDefinition, WorkflowNodeLog, WorkflowRun } from '@/api/workflow'
 
@@ -15,10 +16,39 @@ const workflowInput = ref({ phenomenon: '', category: '', locationDetail: '', ur
 let timer: number | undefined
 
 const selectedLogMap = computed(() => new Map(logs.value.map((log) => [log.nodeKey, log])))
+const nodePositions = computed(() => {
+  const nodes = definition.value?.nodes ?? []
+  return nodes.map((node, index) => ({ ...node, x: 84 + index * 190, y: 132 }))
+})
+const canvasWidth = computed(() => Math.max(900, 168 + (definition.value?.nodes.length ?? 0) * 190))
+const runStateText = computed(() => selectedRun.value ? statusLabel(selectedRun.value.status) : '等待运行')
 
 function nodeState(key: string) {
   const log = selectedLogMap.value.get(key)
   return log?.status ?? 'PENDING'
+}
+
+function nodePosition(key: string) {
+  return nodePositions.value.find((node) => node.key === key)
+}
+
+function nodePoint(key: string, side: 'left' | 'right') {
+  const node = nodePosition(key)
+  return node ? { x: node.x + (side === 'right' ? 124 : 0), y: node.y + 30 } : { x: 0, y: 0 }
+}
+
+function edgePath(from: string, to: string) {
+  const start = nodePoint(from, 'right')
+  const end = nodePoint(to, 'left')
+  const middle = (start.x + end.x) / 2
+  return `M ${start.x} ${start.y} C ${middle} ${start.y}, ${middle} ${end.y}, ${end.x} ${end.y}`
+}
+
+function nodeClass(key: string) {
+  const status = nodeState(key).toLowerCase()
+  return status === 'completed' || status === 'degraded' || status === 'failed' || status === 'running'
+    ? `node-${status}`
+    : 'node-pending'
 }
 
 function statusLabel(status: string) {
@@ -87,6 +117,8 @@ onMounted(async () => {
     definition.value = await fetchWorkflowDefinition()
     await loadRuns()
     timer = window.setInterval(loadRuns, 2000)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '加载工作流定义失败')
   } finally {
     loading.value = false
   }
@@ -99,65 +131,55 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="workflow-page" v-loading="loading">
-    <div class="workflow-head">
-      <div>
-        <p class="eyebrow">AGENT WORKFLOW</p>
-        <h2>智能体工作流</h2>
-        <p class="subhead">LangChain4j 报修分诊链路 · 节点状态和调用日志实时刷新</p>
+    <header class="workflow-toolbar">
+      <div class="workflow-title"><el-icon><Share /></el-icon><strong>{{ definition?.workflowName ?? '智能报修分诊工作流' }}</strong><span>{{ definition?.workflowKey }}</span></div>
+      <div class="legend">
+        <span><i class="legend-start"></i>起止</span><span><i class="legend-branch"></i>判断</span><span><i class="legend-agent"></i>智能体</span><span><i class="legend-tool"></i>系统环节</span><span><i class="legend-human"></i>人工环节</span><span><i class="legend-line"></i>已流转</span><span><i class="legend-dash"></i>回环分支</span>
       </div>
-      <el-button type="primary" @click="showStartDialog = true">启动报修分诊</el-button>
-    </div>
+      <div class="toolbar-actions">
+        <el-select v-model="selectedRun" value-key="id" placeholder="选择运行记录" class="run-select" @change="selectRun">
+          <el-option v-for="run in runs" :key="run.id" :label="`#${run.id} · ${run.inputSummary || '报修分诊'}`" :value="run" />
+        </el-select>
+        <el-button type="primary" @click="showStartDialog = true">启动分诊</el-button>
+      </div>
+    </header>
 
-    <section class="wp-card flow-card">
-      <div class="section-head">
-        <h3 class="card-title">{{ definition?.workflowName ?? '智能报修分诊工作流' }}</h3>
-        <span class="muted">{{ definition?.workflowKey }}</span>
+    <section class="canvas-section" aria-label="工作流流程图">
+      <div class="flow-canvas">
+        <svg v-if="definition" class="flow-svg" :viewBox="`0 0 ${canvasWidth} 264`" :style="{ minWidth: `${canvasWidth}px` }" role="img" :aria-label="definition.workflowName">
+          <defs>
+            <pattern id="flow-grid" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".8" fill="#34363c" /></pattern>
+            <marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#696c75" /></marker>
+            <marker id="flow-arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#42b883" /></marker>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#flow-grid)" />
+          <g v-for="(edge, index) in definition.edges" :key="`${edge.from}-${edge.to}-${index}`">
+            <path :d="edgePath(edge.from, edge.to)" class="flow-edge" :class="{ passed: !!selectedLogMap.get(edge.from) && !!selectedLogMap.get(edge.to) }" :marker-end="selectedLogMap.get(edge.to) ? 'url(#flow-arrow-active)' : 'url(#flow-arrow)'" />
+            <text v-if="edge.label" :x="(nodePoint(edge.from, 'right').x + nodePoint(edge.to, 'left').x) / 2" y="112" class="edge-label">{{ edge.label }}</text>
+          </g>
+          <g v-for="node in nodePositions" :key="node.key" class="flow-node" :class="nodeClass(node.key)" :transform="`translate(${node.x}, ${node.y})`">
+            <rect class="node-box" width="124" height="60" rx="7" />
+            <circle class="node-dot" cx="15" cy="17" r="4" />
+            <text x="25" y="21" class="node-title">{{ node.name }}</text>
+            <text x="12" y="43" class="node-subtitle">{{ node.type }} · {{ statusLabel(nodeState(node.key)) }}</text>
+          </g>
+          <text v-if="!runs.length" x="22" y="230" class="canvas-hint">启动一次报修分诊后，可在此查看节点状态与流转记录</text>
+        </svg>
       </div>
-      <div v-if="definition" class="flow-track">
-        <template v-for="(node, index) in definition.nodes" :key="node.key">
-          <div class="flow-node" :class="`state-${nodeState(node.key).toLowerCase()}`">
-            <div class="node-order">{{ node.order }}</div>
-            <div class="node-name">{{ node.name }}</div>
-            <div class="node-type">{{ node.type }}</div>
-            <el-tag :type="statusType(nodeState(node.key))" size="small" effect="plain">{{ statusLabel(nodeState(node.key)) }}</el-tag>
-          </div>
-          <div v-if="index < definition.nodes.length - 1" class="flow-arrow">→</div>
-        </template>
-      </div>
+      <div class="canvas-footer"><span>{{ definition?.nodes.length ?? 0 }} 个节点</span><span>{{ definition?.edges.length ?? 0 }} 条流转关系</span><span>{{ selectedRun ? `运行 #${selectedRun.id}` : '未选择运行记录' }}</span><span class="run-state" :class="`status-${selectedRun?.status.toLowerCase() ?? 'pending'}`">{{ runStateText }}</span><span class="canvas-spacer"></span><el-button text aria-label="放大流程图">⌕</el-button><el-button text aria-label="适应画布">□</el-button></div>
     </section>
 
-    <div class="workflow-grid">
-      <section class="wp-card runs-card">
-        <div class="section-head">
-          <h3 class="card-title">运行记录</h3>
-          <span class="muted">{{ runs.length }} 条</span>
+    <section class="console-section">
+      <header class="console-header"><div><strong>实时运行日志</strong><span v-if="selectedRun">工单 #{{ selectedRun.id }} · 场景：{{ selectedRun.inputSummary }} · 耗时 {{ selectedRun.latencyMs ?? '—' }} ms</span><span v-else>选择或启动一个工作流以查看动态调用日志</span></div><el-tag v-if="selectedRun" :type="statusType(selectedRun.status)" effect="plain" size="small">{{ statusLabel(selectedRun.status) }}</el-tag><span v-else class="live-indicator"><i></i>轮询中</span></header>
+      <div v-if="logs.length" class="log-console" role="log" aria-live="polite">
+        <div v-for="log in logs" :key="log.id" class="console-row" :class="`console-${log.status.toLowerCase()}`">
+          <time>{{ log.startedAt?.slice(11, 19) ?? '--:--:--' }}</time><span class="console-name">{{ log.nodeName }}</span><span class="console-model">{{ log.model || '规则节点' }}</span><span class="console-output">{{ log.outputSummary || log.errorMessage || '节点正在执行…' }}</span><span class="console-latency">{{ log.latencyMs ?? '…' }} ms</span>
         </div>
-        <div v-if="!runs.length" class="empty">暂无运行记录</div>
-        <button v-for="run in runs" :key="run.id" class="run-row" :class="{ active: selectedRun?.id === run.id }" @click="selectRun(run)">
-          <span class="run-id">#{{ run.id }}</span>
-          <span class="run-summary">{{ run.inputSummary || '无输入摘要' }}</span>
-          <el-tag :type="statusType(run.status)" size="small" effect="plain">{{ statusLabel(run.status) }}</el-tag>
-        </button>
-      </section>
+      </div>
+      <div v-else class="console-empty">暂无调用日志</div>
+    </section>
 
-      <section class="wp-card logs-card">
-        <div class="section-head">
-          <div>
-            <h3 class="card-title">动态调用日志</h3>
-            <span v-if="selectedRun" class="muted">运行 #{{ selectedRun.id }} · {{ selectedRun.latencyMs ?? '—' }} ms</span>
-          </div>
-          <el-tag v-if="selectedRun" :type="statusType(selectedRun.status)" size="small">{{ statusLabel(selectedRun.status) }}</el-tag>
-        </div>
-        <el-timeline v-if="logs.length">
-          <el-timeline-item v-for="log in logs" :key="log.id" :timestamp="`${log.latencyMs ?? '—'} ms`" placement="top" :type="log.status === 'FAILED' ? 'danger' : log.status === 'DEGRADED' ? 'warning' : 'primary'">
-            <div class="log-head"><strong>{{ log.sequenceNo }}. {{ log.nodeName }}</strong><el-tag :type="statusType(log.status)" size="small" effect="plain">{{ statusLabel(log.status) }}</el-tag></div>
-            <div class="log-meta">{{ log.model || '规则节点' }} · {{ log.nodeKey }}</div>
-            <p>{{ log.outputSummary || log.errorMessage || '节点已启动，等待输出' }}</p>
-          </el-timeline-item>
-        </el-timeline>
-        <div v-else class="empty">选择运行记录后查看节点调用日志</div>
-      </section>
-    </div>
+    <section class="runs-strip"><div class="runs-strip-title">最近运行 <span>{{ runs.length }}</span></div><button v-for="run in runs.slice(0, 8)" :key="run.id" class="run-chip" :class="{ active: selectedRun?.id === run.id }" @click="selectRun(run)"><i :class="`status-dot status-${run.status.toLowerCase()}`"></i><span>#{{ run.id }} · {{ run.inputSummary || '报修分诊' }}</span><small>{{ statusLabel(run.status) }}</small></button><span v-if="!runs.length" class="no-runs">等待首次运行</span></section>
 
     <el-dialog v-model="showStartDialog" title="启动报修分诊" width="520px">
       <el-form label-position="top">
@@ -188,36 +210,81 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.workflow-page { display: grid; gap: 16px; }
-.workflow-head, .section-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.workflow-head h2 { margin: 2px 0 6px; font-size: 24px; }
-.eyebrow { margin: 0; color: var(--wp-amber); font-size: 11px; letter-spacing: 1.4px; font-weight: 700; }
-.subhead, .muted, .log-meta { color: var(--wp-muted); font-size: 12px; }
-.subhead { margin: 0; }
-.flow-card { overflow-x: auto; }
-.flow-track { display: flex; align-items: center; min-width: 900px; padding: 20px 4px 4px; }
-.flow-node { width: 132px; min-height: 124px; padding: 12px; border: 1px solid var(--wp-mist); border-radius: 10px; background: #fbfdfc; text-align: center; transition: border-color .2s, background .2s; }
-.flow-node.state-running { border-color: var(--wp-amber); background: #fff9ef; }
-.flow-node.state-completed { border-color: #77b6a9; background: #f2fbf8; }
-.flow-node.state-degraded { border-color: #e5bd73; background: #fff9ef; }
-.flow-node.state-failed { border-color: var(--wp-brick); background: #fff5f2; }
-.node-order { width: 24px; height: 24px; margin: 0 auto 8px; border-radius: 50%; background: var(--wp-ink); color: white; line-height: 24px; font-size: 12px; }
-.node-name { font-size: 14px; font-weight: 600; }
-.node-type { margin: 5px 0 10px; color: var(--wp-muted); font-size: 10px; letter-spacing: .7px; }
-.flow-arrow { flex: 1; min-width: 28px; color: var(--wp-moss); font-size: 22px; text-align: center; }
-.workflow-grid { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(440px, 1.6fr); gap: 16px; }
-.runs-card, .logs-card { min-height: 360px; }
-.run-row { width: 100%; display: grid; grid-template-columns: 45px 1fr auto; gap: 8px; align-items: center; padding: 12px 8px; border: 0; border-bottom: 1px solid var(--wp-hairline); background: transparent; color: var(--wp-ink); text-align: left; cursor: pointer; }
-.run-row:hover, .run-row.active { background: #f0f7f4; }
-.run-id { color: var(--wp-moss); font-size: 12px; font-variant-numeric: tabular-nums; }
-.run-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.empty { padding: 42px 12px; color: var(--wp-muted); text-align: center; font-size: 13px; }
-.log-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.log-meta { margin-top: 4px; }
-.logs-card :deep(.el-timeline) { margin-top: 18px; }
-.logs-card p { margin: 7px 0 0; color: var(--wp-ink); line-height: 1.6; font-size: 13px; }
+.workflow-page { display: grid; grid-template-rows: auto minmax(290px, 1fr) minmax(170px, .62fr) auto; gap: 9px; min-height: calc(100vh - 112px); color: #303238; }
+.workflow-toolbar { display: flex; align-items: center; gap: 14px; min-height: 38px; padding: 0 3px; }
+.workflow-title { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.workflow-title :deep(.el-icon) { color: #a660bf; font-size: 17px; }
+.workflow-title strong { font-size: 15px; }
+.workflow-title > span { color: #9a9ca3; font-size: 11px; }
+.legend { display: flex; flex: 1; justify-content: flex-end; gap: 12px; color: #6f727a; font-size: 10px; white-space: nowrap; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { display: inline-block; width: 8px; height: 8px; border: 1px solid #8cceb0; border-radius: 50%; }
+.legend-branch { border-color: #bd8cd2 !important; transform: rotate(45deg); border-radius: 1px !important; }
+.legend-agent { background: #1687ed; border-color: #1687ed !important; }
+.legend-tool { background: #92949b; border-color: #92949b !important; }
+.legend-human { background: #e8a21b; border-color: #e8a21b !important; }
+.legend-line { width: 15px !important; height: 2px !important; border: 0 !important; border-radius: 0 !important; background: #1687ed; }
+.legend-dash { width: 15px !important; height: 0 !important; border: 0 !important; border-top: 2px dashed #df9a20 !important; border-radius: 0 !important; }
+.toolbar-actions { display: flex; align-items: center; gap: 8px; }
+.run-select { width: 230px; }
+.canvas-section { display: flex; min-height: 0; flex-direction: column; border: 1px solid #e6e7ea; background: #fff; }
+.flow-canvas { flex: 1; min-height: 0; overflow: auto; background: #202126; }
+.flow-svg { display: block; width: 100%; height: 100%; min-height: 292px; }
+.flow-edge { fill: none; stroke: #666972; stroke-width: 1.5; marker-end: url(#flow-arrow); transition: stroke .2s; }
+.flow-edge.passed { stroke: #37aa77; stroke-width: 2; marker-end: url(#flow-arrow-active); }
+.edge-label { fill: #aaaeb7; font-size: 9px; text-anchor: middle; }
+.node-box { fill: #303137; stroke: #45474f; stroke-width: 1; }
+.flow-node.node-completed .node-box { fill: #102f28; stroke: #279b69; }
+.flow-node.node-degraded .node-box { fill: #342a17; stroke: #d1982d; }
+.flow-node.node-failed .node-box { fill: #3a2023; stroke: #d65c62; }
+.flow-node.node-running .node-box { fill: #0d2f50; stroke: #2686d2; stroke-width: 1.5; }
+.node-dot { fill: #8b8d95; }
+.node-completed .node-dot { fill: #39ba80; }
+.node-degraded .node-dot { fill: #e9a72d; }
+.node-failed .node-dot { fill: #ef626a; }
+.node-running .node-dot { fill: #2494f0; }
+.node-title { fill: #f0f1f3; font-size: 11px; font-weight: 600; }
+.node-subtitle { fill: #a9abb2; font-size: 9px; }
+.canvas-hint { fill: #7f818a; font-size: 11px; }
+.canvas-footer { display: flex; align-items: center; gap: 16px; min-height: 33px; padding: 0 10px; color: #747780; font-size: 10px; }
+.run-state { padding: 3px 7px; border-radius: 3px; background: #f0f1f2; color: #747780; }
+.status-running { background: #fff3dc; color: #b97912; }
+.status-completed { background: #e9f7ef; color: #258252; }
+.status-degraded { background: #fff3dc; color: #b97912; }
+.status-failed { background: #fff0f0; color: #c63e45; }
+.canvas-spacer { flex: 1; }
+.console-section { display: flex; min-height: 0; flex-direction: column; border: 1px solid #e6e7ea; background: #fff; }
+.console-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 40px; padding: 0 10px; border-bottom: 1px solid #e9eaed; }
+.console-header > div { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.console-header strong { flex: 0 0 auto; font-size: 13px; }
+.console-header span { overflow: hidden; color: #898b93; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.live-indicator { display: inline-flex; align-items: center; gap: 5px; }
+.live-indicator i { width: 7px; height: 7px; border-radius: 50%; background: #37ad73; }
+.log-console { flex: 1; overflow: auto; padding: 5px 9px; background: #202126; color: #d5d7dc; font: 11px/1.55 Consolas, 'SFMono-Regular', monospace; }
+.console-row { display: grid; grid-template-columns: 66px 130px 130px minmax(160px, 1fr) 52px; align-items: baseline; gap: 8px; min-height: 24px; border-bottom: 1px solid #2b2c32; }
+.console-row time, .console-latency { color: #8d9099; font-variant-numeric: tabular-nums; }
+.console-name { color: #62b7f0; }
+.console-model { color: #9f83d0; }
+.console-output { overflow: hidden; color: #bec1c8; text-overflow: ellipsis; white-space: nowrap; }
+.console-degraded .console-name { color: #e9aa39; }
+.console-failed .console-name { color: #f1777e; }
+.console-completed .console-name { color: #48c28a; }
+.console-empty { display: grid; flex: 1; min-height: 96px; place-items: center; background: #202126; color: #858891; font-size: 12px; }
+.runs-strip { display: flex; align-items: center; gap: 7px; min-width: 0; overflow-x: auto; padding: 1px 2px; }
+.runs-strip-title { flex: 0 0 auto; margin-right: 4px; color: #686b73; font-size: 11px; font-weight: 600; }
+.runs-strip-title span { margin-left: 4px; color: #a1a3aa; font-weight: 400; }
+.run-chip { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; max-width: 240px; height: 27px; padding: 0 8px; border: 1px solid #e6e7ea; border-radius: 4px; background: #fff; color: #555861; cursor: pointer; }
+.run-chip.active { border-color: #c89bd8; background: #fbf6fd; }
+.run-chip > span { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.run-chip small { color: #9698a0; font-size: 9px; white-space: nowrap; }
+.status-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #9b9da4; }
+.status-dot.status-running { background: #e7a32a; }
+.status-dot.status-completed { background: #35aa72; }
+.status-dot.status-degraded { background: #e7a32a; }
+.status-dot.status-failed { background: #d95259; }
+.no-runs { color: #93959c; font-size: 11px; }
 .dialog-form-grid { display: grid; grid-template-columns: 1fr 140px; gap: 14px; }
 .full-width { width: 100%; }
-@media (max-width: 900px) { .workflow-grid { grid-template-columns: 1fr; } }
-@media (max-width: 560px) { .dialog-form-grid { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 1100px) { .workflow-page { grid-template-rows: auto minmax(280px, 1fr) minmax(160px, .6fr) auto; } .legend { display: none; } .workflow-toolbar { justify-content: space-between; } }
+@media (max-width: 650px) { .workflow-page { min-height: calc(100vh - 105px); grid-template-rows: auto minmax(260px, 1fr) minmax(150px, .6fr) auto; } .workflow-toolbar { flex-wrap: wrap; } .workflow-title { width: 100%; } .toolbar-actions { width: 100%; } .run-select { flex: 1; min-width: 0; } .console-row { grid-template-columns: 58px 95px minmax(120px, 1fr) 45px; } .console-model { display: none; } .dialog-form-grid { grid-template-columns: 1fr; gap: 0; } }
 </style>

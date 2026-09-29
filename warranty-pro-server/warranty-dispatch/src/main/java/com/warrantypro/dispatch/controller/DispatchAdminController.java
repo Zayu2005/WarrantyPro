@@ -57,10 +57,19 @@ public class DispatchAdminController {
                 .collect(Collectors.toSet());
         List<Map<String, Object>> list = new ArrayList<>();
         for (CandidateWorker w : workerProfileMapper.selectAllWorkers()) {
-            list.add(Map.of(
-                    "workerId", w.getUserId(),
-                    "realName", w.getRealName(),
-                    "todayDuty", todayDuty.contains(w.getUserId())));
+            list.add(Map.ofEntries(
+                    Map.entry("workerId", w.getUserId()),
+                    Map.entry("realName", w.getRealName()),
+                    Map.entry("phone", w.getPhone() == null ? "" : w.getPhone()),
+                    Map.entry("onDuty", Integer.valueOf(1).equals(w.getOnDuty())),
+                    Map.entry("status", w.getStatus()),
+                    Map.entry("communityId", w.getCommunityId() == null ? 0L : w.getCommunityId()),
+                    Map.entry("maxConcurrent", w.getMaxConcurrent() == null ? 0 : w.getMaxConcurrent()),
+                    Map.entry("ratingAvg", w.getRatingAvg() == null ? 0 : w.getRatingAvg()),
+                    Map.entry("ratingCount", w.getRatingCount() == null ? 0 : w.getRatingCount()),
+                    Map.entry("orderTotal", w.getOrderTotal() == null ? 0 : w.getOrderTotal()),
+                    Map.entry("orderCompleted", w.getOrderCompleted() == null ? 0 : w.getOrderCompleted()),
+                    Map.entry("todayDuty", todayDuty.contains(w.getUserId()))));
         }
         return Result.ok(list);
     }

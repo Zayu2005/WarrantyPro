@@ -3,8 +3,11 @@ package com.warrantypro.auth.controller;
 import com.warrantypro.auth.dto.LoginRequest;
 import com.warrantypro.auth.dto.LoginResponse;
 import com.warrantypro.auth.dto.RefreshBody;
+import com.warrantypro.auth.dto.SliderCaptchaVO;
+import com.warrantypro.auth.dto.SliderCaptchaVerifyRequest;
 import com.warrantypro.auth.dto.UserInfoVO;
 import com.warrantypro.auth.service.AuthService;
+import com.warrantypro.auth.service.SliderCaptchaService;
 import com.warrantypro.common.result.Result;
 import com.warrantypro.common.security.LoginUser;
 import jakarta.validation.Valid;
@@ -24,6 +27,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final SliderCaptchaService sliderCaptchaService;
+
+    @GetMapping("/slider-captcha")
+    public Result<SliderCaptchaVO> sliderCaptcha() {
+        return Result.ok(sliderCaptchaService.issue());
+    }
+
+    @PostMapping("/slider-captcha/verify")
+    public Result<Void> verifySliderCaptcha(@Valid @RequestBody SliderCaptchaVerifyRequest request) {
+        sliderCaptchaService.verify(request.challengeId(), request.sliderOffset(), request.trajectory());
+        return Result.ok();
+    }
 
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {

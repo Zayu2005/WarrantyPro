@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { loginApi } from '@/api/auth'
-import type { UserInfo } from '@/api/auth'
+import type { LoginPayload, UserInfo } from '@/api/auth'
 
 const TOKEN_KEY = 'wp_token'
 const USER_KEY = 'wp_user'
@@ -28,8 +28,8 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function login(username: string, password: string) {
-    const result = await loginApi({ username, password })
+  async function login(payload: LoginPayload) {
+    const result = await loginApi(payload)
     setToken(result.accessToken)
     userInfo.value = result.user
     localStorage.setItem(USER_KEY, JSON.stringify(result.user))

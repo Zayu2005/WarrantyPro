@@ -17,4 +17,16 @@ public class CandidateWorker {
     private Integer maxConcurrent;
 
     private BigDecimal ratingAvg;
+
+    private Integer ratingCount;
+
+    private Integer orderTotal;
+
+    private Integer orderCompleted;
+
+    private Integer onDuty;
+
+    private Integer status;
+
+    private String phone;
 }

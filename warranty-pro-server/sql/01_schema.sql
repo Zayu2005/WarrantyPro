@@ -57,6 +57,23 @@ CREATE TABLE sys_user_role (
   KEY idx_role (role_id)
 ) ENGINE = InnoDB COMMENT = '用户角色关联表（业主与师傅可为同一人）';
 
+CREATE TABLE sys_menu (
+  id         BIGINT UNSIGNED AUTO_INCREMENT COMMENT '主键',
+  parent_id  BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '上级菜单，0 表示根节点',
+  name       VARCHAR(50) NOT NULL COMMENT '菜单名称',
+  path       VARCHAR(100) NOT NULL DEFAULT '' COMMENT '前端页面路径',
+  icon       VARCHAR(40) NOT NULL DEFAULT '' COMMENT 'Element Plus 图标名',
+  type       VARCHAR(10) NOT NULL COMMENT 'DIR 目录 / MENU 页面',
+  sort_order INT NOT NULL DEFAULT 0 COMMENT '同级排序',
+  visible    TINYINT NOT NULL DEFAULT 1 COMMENT '1 显示 / 0 隐藏',
+  status     TINYINT NOT NULL DEFAULT 1 COMMENT '1 启用 / 0 停用',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_menu_path (path),
+  KEY idx_parent_order (parent_id, sort_order)
+) ENGINE = InnoDB COMMENT = '后台导航菜单';
+
 -- =====================================================================
 -- 2. 房产与设施组
 -- =====================================================================

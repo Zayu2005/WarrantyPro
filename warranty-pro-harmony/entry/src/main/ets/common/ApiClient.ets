@@ -27,6 +27,23 @@ export class LoginData {
   user: LoginUserInfo = new LoginUserInfo();
 }
 
+export class SliderCaptchaData {
+  challengeId: string = '';
+  backgroundImage: string = '';
+  pieceImage: string = '';
+  imageWidth: number = 260;
+  imageHeight: number = 130;
+  pieceY: number = 0;
+  pieceSize: number = 44;
+  trackWidth: number = 208;
+}
+
+export class SliderCaptchaResult {
+  code: number = -1;
+  message: string = '';
+  data: SliderCaptchaData | null = null;
+}
+
 export class ApiResult {
   code: number = -1;
   message: string = '';
@@ -126,6 +143,12 @@ export class OrderCreateResult {
 class LoginBody {
   username: string = '';
   password: string = '';
+  challengeId: string = '';
+}
+
+class SliderCaptchaVerifyBody {
+  challengeId: string = '';
+  sliderOffset: number = 0;
 }
 
 class CreateOrderBody {
@@ -198,11 +221,26 @@ async function putJSON(path: string, body: object, token: string): Promise<strin
   }
 }
 
-/** 用户名密码登录（POST /api/v1/auth/login）。 */
-export async function loginByPassword(username: string, password: string): Promise<ApiResult> {
+/** 获取一次性滑动拼图验证码（GET /api/v1/auth/slider-captcha）。 */
+export async function fetchSliderCaptcha(): Promise<SliderCaptchaResult> {
+  return JSON.parse(await getJSON('/api/v1/auth/slider-captcha', '')) as SliderCaptchaResult;
+}
+
+/** 校验滑动验证码（POST /api/v1/auth/slider-captcha/verify）。 */
+export async function verifySliderCaptcha(challengeId: string, sliderOffset: number): Promise<WorkerActionResult> {
+  const body: SliderCaptchaVerifyBody = new SliderCaptchaVerifyBody();
+  body.challengeId = challengeId;
+  body.sliderOffset = sliderOffset;
+  return JSON.parse(await postJSON('/api/v1/auth/slider-captcha/verify', body, '')) as WorkerActionResult;
+}
+
+/** 用户名密码登录并消费已校验的一次性挑战。 */
+export async function loginByPassword(username: string, password: string,
+  challengeId: string): Promise<ApiResult> {
   const body: LoginBody = new LoginBody();
   body.username = username;
   body.password = password;
+  body.challengeId = challengeId;
   return JSON.parse(await postJSON('/api/v1/auth/login', body, '')) as ApiResult;
 }
 

@@ -15,9 +15,11 @@ public interface WorkerProfileMapper extends BaseMapper<WorkerProfile> {
 
     /** 当日值班且在岗的师傅（派单候选池）。 */
     @Select("""
-            SELECT p.user_id AS userId, u.real_name AS realName,
-                   p.community_id AS communityId,
-                   p.max_concurrent AS maxConcurrent, p.rating_avg AS ratingAvg
+            SELECT p.user_id AS userId, u.real_name AS realName, u.phone AS phone,
+                   u.status AS status, p.community_id AS communityId,
+                   p.max_concurrent AS maxConcurrent, p.rating_avg AS ratingAvg,
+                   p.rating_count AS ratingCount, p.order_total AS orderTotal,
+                   p.order_completed AS orderCompleted, p.on_duty AS onDuty
             FROM worker_profile p
             JOIN sys_user u ON u.id = p.user_id AND u.deleted = 0 AND u.status = 1
             JOIN worker_schedule s ON s.worker_id = p.user_id AND s.duty_date = #{date}
@@ -27,9 +29,11 @@ public interface WorkerProfileMapper extends BaseMapper<WorkerProfile> {
 
     /** 师傅列表（含全部在岗标记，排班管理页用）。 */
     @Select("""
-            SELECT p.user_id AS userId, u.real_name AS realName,
-                   p.community_id AS communityId,
-                   p.max_concurrent AS maxConcurrent, p.rating_avg AS ratingAvg
+            SELECT p.user_id AS userId, u.real_name AS realName, u.phone AS phone,
+                   u.status AS status, p.community_id AS communityId,
+                   p.max_concurrent AS maxConcurrent, p.rating_avg AS ratingAvg,
+                   p.rating_count AS ratingCount, p.order_total AS orderTotal,
+                   p.order_completed AS orderCompleted, p.on_duty AS onDuty
             FROM worker_profile p
             JOIN sys_user u ON u.id = p.user_id AND u.deleted = 0
             WHERE p.deleted = 0

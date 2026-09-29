@@ -24,7 +24,7 @@ public interface StatsMapper {
             FROM repair_order
             WHERE deleted = 0
               AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-            GROUP BY DATE(created_at)
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
             ORDER BY date
             """)
     List<TrendPoint> selectRecentTrend();

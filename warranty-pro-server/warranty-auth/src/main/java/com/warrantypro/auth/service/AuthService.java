@@ -31,8 +31,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TokenBlacklist tokenBlacklist;
+    private final SliderCaptchaService sliderCaptchaService;
 
     public LoginResponse login(LoginRequest request) {
+        sliderCaptchaService.consumeVerified(request.challengeId());
         SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, request.username()));
         if (user == null || user.getPasswordHash() == null

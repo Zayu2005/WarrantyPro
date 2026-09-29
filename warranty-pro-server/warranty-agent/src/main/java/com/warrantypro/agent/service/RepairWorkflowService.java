@@ -26,7 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -42,7 +42,7 @@ public class RepairWorkflowService {
     private final AgentProperties properties;
     private final ObjectMapper objectMapper;
     @Qualifier("agentWorkflowExecutor")
-    private final Executor workflowExecutor;
+    private final ThreadPoolTaskExecutor workflowExecutor;
 
     /** 创建运行记录后异步执行，管理员页面可以通过日志接口观察节点推进。 */
     public WorkflowRunVO start(LoginUser caller, RepairWorkflowRequest request) {

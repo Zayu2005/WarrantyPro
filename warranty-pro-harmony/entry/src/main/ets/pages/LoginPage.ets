@@ -1,6 +1,6 @@
 import { router } from '@kit.ArkUI';
 import { preferences } from '@kit.ArkData';
-import { loginByPassword, LoginData } from '../common/ApiClient';
+import { fetchSliderCaptcha, loginByPassword, LoginData, SliderCaptchaData, verifySliderCaptcha } from '../common/ApiClient';
 
 /**
  * 登录页。
@@ -14,6 +14,12 @@ struct LoginPage {
   @State password: string = '';
   @State remember: boolean = true;
   @State loading: boolean = false;
+  @State captchaLoading: boolean = false;
+  @State captcha: SliderCaptchaData | null = null;
+  @State captchaDialogVisible: boolean = false;
+  @State captchaVerified: boolean = false;
+  @State verifiedChallengeId: string = '';
+  @State sliderOffset: number = 0;
   @State pulse: number = 1;
 
   private readonly C_INK: string = '#103B3A';    // 松青 · 主色
@@ -27,6 +33,65 @@ struct LoginPage {
   aboutToAppear(): void {
     this.loadSavedUsername();
     this.startPulse();
+  }
+
+  private async refreshCaptcha(): Promise<void> {
+    this.captchaLoading = true;
+    this.sliderOffset = 0;
+    this.captchaVerified = false;
+    this.verifiedChallengeId = '';
+    try {
+      const result = await fetchSliderCaptcha();
+      if (result.code !== 0 || result.data === null) {
+        this.captcha = null;
+        this.toast(result.message === '' ? '验证码加载失败，请重试' : result.message);
+        return;
+      }
+      this.captcha = result.data;
+    } catch (err) {
+      this.captcha = null;
+      this.toast('验证码加载失败，请检查网络后重试');
+    } finally {
+      this.captchaLoading = false;
+    }
+  }
+
+  private async openCaptcha(): Promise<void> {
+    if (this.captchaVerified) {
+      return;
+    }
+    if (this.captcha === null) {
+      await this.refreshCaptcha();
+    }
+    if (this.captcha !== null) {
+      this.captchaDialogVisible = true;
+    }
+  }
+
+  private async verifyCaptcha(): Promise<void> {
+    if (this.captcha === null || this.captchaLoading) {
+      return;
+    }
+    this.captchaLoading = true;
+    try {
+      const challengeId = this.captcha.challengeId;
+      const result = await verifySliderCaptcha(challengeId, Math.round(this.sliderOffset));
+      if (result.code !== 0) {
+        this.toast(result.message === '' ? '验证失败，请重试' : result.message);
+        await this.refreshCaptcha();
+        return;
+      }
+      this.verifiedChallengeId = challengeId;
+      this.captchaVerified = true;
+      this.captcha = null;
+      this.captchaDialogVisible = false;
+      this.toast('验证成功');
+    } catch (err) {
+      this.toast('验证失败，请检查网络后重试');
+      await this.refreshCaptcha();
+    } finally {
+      this.captchaLoading = false;
+    }
   }
 
   /** 统一 Toast 出口（API 12 UIContext 写法）。 */
@@ -85,11 +150,18 @@ struct LoginPage {
       this.toast('请输入用户名和密码');
       return;
     }
+    if (!this.captchaVerified || this.verifiedChallengeId === '') {
+      this.toast('请先完成滑动验证');
+      await this.openCaptcha();
+      return;
+    }
     this.loading = true;
     try {
-      const result = await loginByPassword(this.username.trim(), this.password);
+      const result = await loginByPassword(this.username.trim(), this.password,
+        this.verifiedChallengeId);
       if (result.code !== 0 || result.data === null) {
         this.toast(result.message === '' ? '登录失败，请稍后再试' : result.message);
+        await this.refreshCaptcha();
         return;
       }
       await this.saveSession(result.data);
@@ -111,7 +183,8 @@ struct LoginPage {
       AppStorage.setOrCreate('role', role);
       router.replaceUrl({ url: 'pages/MainPage' });
     } catch (err) {
-      this.toast('连接不上服务：请确认与电脑在同一 Wi-Fi，且 ApiClient.ets 里的 BASE_URL 正确');
+      this.toast('登录失败，请重试');
+      await this.refreshCaptcha();
     } finally {
       this.loading = false;
     }
@@ -213,7 +286,110 @@ struct LoginPage {
       })
   }
 
+  @Builder
+  CaptchaOverlay() {
+    if (this.captchaDialogVisible) {
+      Stack({ alignContent: Alignment.Center }) {
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('#80000000')
+          .onClick(() => {
+            this.captchaDialogVisible = false;
+          })
+
+        Column({ space: 12 }) {
+          Row() {
+            Text('安全验证')
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(this.C_INK)
+            Blank()
+            Text('×')
+              .fontSize(22)
+              .fontColor(this.C_MUTED)
+              .onClick(() => {
+                this.captchaDialogVisible = false;
+              })
+          }
+          .width('100%')
+
+          Text('拖动滑块，将拼图移动到对应位置')
+            .width('100%')
+            .fontSize(12)
+            .fontColor(this.C_MUTED)
+
+          if (this.captcha !== null) {
+            Stack() {
+              Image(this.captcha.backgroundImage)
+                .width(260)
+                .height(130)
+                .objectFit(ImageFit.Fill)
+              Image(this.captcha.pieceImage)
+                .width(this.captcha.pieceSize)
+                .height(this.captcha.pieceSize)
+                .objectFit(ImageFit.Fill)
+                .position({ x: this.sliderOffset, y: this.captcha.pieceY })
+            }
+            .width(260)
+            .height(130)
+            .clip(true)
+            .borderRadius(6)
+
+            Slider({ value: this.sliderOffset, min: 0, max: this.captcha.trackWidth, step: 1, style: SliderStyle.OutSet })
+              .width('100%')
+              .blockColor(this.C_MOSS)
+              .trackColor(this.C_MIST)
+              .selectedColor(this.C_MOSS)
+              .enabled(!this.loading && !this.captchaLoading)
+              .onChange((value: number) => {
+                this.sliderOffset = value;
+              })
+          } else {
+            Text(this.captchaLoading ? '验证码加载中' : '验证码加载失败')
+              .width('100%')
+              .height(130)
+              .textAlign(TextAlign.Center)
+              .fontSize(12)
+              .fontColor(this.C_MUTED)
+              .backgroundColor(this.C_PAPER)
+              .borderRadius(6)
+          }
+
+          Row({ space: 10 }) {
+            Text('换一张')
+              .fontSize(13)
+              .fontColor(this.C_MOSS)
+              .onClick(() => {
+                this.refreshCaptcha();
+              })
+            Blank()
+            Button('验证')
+              .width(92)
+              .height(38)
+              .borderRadius(6)
+              .backgroundColor(this.C_INK)
+              .fontColor(Color.White)
+              .enabled(this.captcha !== null && !this.captchaLoading)
+              .onClick(() => {
+                this.verifyCaptcha();
+              })
+          }
+          .width('100%')
+        }
+        .width(300)
+        .padding(18)
+        .borderRadius(10)
+        .backgroundColor(Color.White)
+      }
+      .width('100%')
+      .height('100%')
+      .zIndex(10)
+    }
+  }
+
   build() {
+    Stack() {
     Scroll() {
       Column() {
         // ---- 品牌区 ----
@@ -288,6 +464,19 @@ struct LoginPage {
               .color(this.C_MIST)
               .margin({ bottom: 20 })
 
+            Button(this.captchaVerified ? '✓  验证成功' : (this.captchaLoading ? '正在加载验证' : '点击完成安全验证'))
+              .width('100%')
+              .height(46)
+              .margin({ bottom: 20 })
+              .borderRadius(6)
+              .backgroundColor(this.captchaVerified ? '#E8F4EE' : this.C_PAPER)
+              .fontColor(this.captchaVerified ? '#247454' : this.C_INK)
+              .fontSize(14)
+              .enabled(!this.captchaVerified && !this.captchaLoading)
+              .onClick(() => {
+                this.openCaptcha();
+              })
+
             Row() {
               Row({ space: 6 }) {
                 Checkbox()
@@ -326,7 +515,7 @@ struct LoginPage {
               .fontColor(Color.White)
               .fontSize(17)
               .fontWeight(FontWeight.Medium)
-              .enabled(!this.loading)
+              .enabled(!this.loading && this.captchaVerified)
               .onClick(() => {
                 this.onLogin();
               })
@@ -365,5 +554,9 @@ struct LoginPage {
     .backgroundColor(this.C_PAPER)
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+      this.CaptchaOverlay()
+    }
+    .width('100%')
+    .height('100%')
   }
 }
