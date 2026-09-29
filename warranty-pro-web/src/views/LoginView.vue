@@ -134,8 +134,13 @@ function onForgot() {
 
 <template>
   <div class="login-page">
-    <!-- 品牌板：与鸿蒙端同一签名的职场版 -->
+    <!-- 品牌板：深紫光影 · 工单数据流 -->
     <aside class="brand-panel">
+      <div class="bp-aurora bp-aurora-1"></div>
+      <div class="bp-aurora bp-aurora-2"></div>
+      <div class="bp-aurora bp-aurora-3"></div>
+      <div class="bp-grid"></div>
+
       <div class="bp-logo">
         <span class="bp-mark">W</span>
         <span>WarrantyPro</span>
@@ -143,6 +148,7 @@ function onForgot() {
 
       <div class="bp-center">
         <div class="bp-pipeline">
+          <span class="bp-spark"></span>
           <div v-for="(s, i) in stages" :key="s" class="bp-step">
             <span class="dot" :class="i === 2 ? 'active' : i < 2 ? 'done' : 'todo'"></span>
             <span class="step-label" :class="i === 2 ? 'on' : ''">{{ s }}</span>
@@ -152,7 +158,11 @@ function onForgot() {
         <p class="bp-sub">数字化物业报修平台 · 管理后台</p>
       </div>
 
-      <div class="bp-foot">工单调度 · 师傅排班 · 数据看板</div>
+      <div class="bp-foot">
+        <span class="bp-cap"><i></i>工单调度</span>
+        <span class="bp-cap"><i></i>师傅排班</span>
+        <span class="bp-cap"><i></i>数据看板</span>
+      </div>
     </aside>
 
     <!-- 表单区 -->
@@ -233,15 +243,80 @@ function onForgot() {
   background: var(--wp-paper);
 }
 
-/* ---- 左侧品牌板（浅色） ---- */
+/* ---- 左侧品牌板：深紫光影 ---- */
 .brand-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 36px 40px;
-  background: #fff;
-  border-right: 1px solid #e8eaed;
-  color: var(--wp-ink);
+  overflow: hidden;
+  background:
+    radial-gradient(900px at 85% -10%, rgba(179, 107, 210, 0.3), transparent 60%),
+    linear-gradient(165deg, #17091f 0%, #241033 48%, #33144d 100%);
+  color: #fff;
+}
+
+/* 极光光斑：缓慢漂移的模糊色团 */
+.bp-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.bp-aurora-1 {
+  width: 340px;
+  height: 340px;
+  background: #8e44ad;
+  top: -90px;
+  left: -70px;
+  animation: bp-drift-1 18s ease-in-out infinite alternate;
+}
+.bp-aurora-2 {
+  width: 300px;
+  height: 300px;
+  background: #b36bd2;
+  bottom: -80px;
+  right: -60px;
+  animation: bp-drift-2 14s ease-in-out infinite alternate;
+}
+.bp-aurora-3 {
+  width: 220px;
+  height: 220px;
+  background: #5b2a86;
+  top: 42%;
+  left: 52%;
+  animation: bp-drift-3 22s ease-in-out infinite alternate;
+}
+@keyframes bp-drift-1 {
+  to { transform: translate(70px, 50px) scale(1.18); }
+}
+@keyframes bp-drift-2 {
+  to { transform: translate(-60px, -40px) scale(1.1); }
+}
+@keyframes bp-drift-3 {
+  to { transform: translate(-50px, 40px) scale(1.22); }
+}
+
+/* 工程蓝图网格，边缘淡出 */
+.bp-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 44px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 44px);
+  -webkit-mask-image: radial-gradient(ellipse at 30% 40%, rgba(0, 0, 0, 0.9), transparent 78%);
+  mask-image: radial-gradient(ellipse at 30% 40%, rgba(0, 0, 0, 0.9), transparent 78%);
+}
+
+.bp-logo,
+.bp-center,
+.bp-foot {
+  position: relative;
+  z-index: 1;
 }
 
 .bp-logo {
@@ -251,6 +326,7 @@ function onForgot() {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.3px;
+  color: #fff;
 }
 
 .bp-mark {
@@ -260,7 +336,10 @@ function onForgot() {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #b36bd2 0%, #8e44ad 100%);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 18px rgba(179, 107, 210, 0.45);
+  backdrop-filter: blur(6px);
   color: #fff;
   font-size: 16px;
   font-weight: 700;
@@ -270,10 +349,12 @@ function onForgot() {
   margin: auto 0;
 }
 
+/* 工单流水线：发光数据流 + 循环流光 */
 .bp-pipeline {
   position: relative;
   display: flex;
-  margin-bottom: 30px;
+  margin-bottom: 34px;
+  height: 12px;
 }
 
 .bp-pipeline::before {
@@ -283,7 +364,27 @@ function onForgot() {
   right: 12.5%;
   top: 5px;
   height: 2px;
-  background: linear-gradient(90deg, #b36bd2 0 66%, #e8e5ef 66% 100%);
+  background: linear-gradient(90deg, rgba(179, 107, 210, 0.95) 0 66%, rgba(255, 255, 255, 0.16) 66% 100%);
+  box-shadow: 0 0 10px rgba(179, 107, 210, 0.55);
+}
+
+/* 流光小点：从"提交"驶向"验收" */
+.bp-spark {
+  position: absolute;
+  top: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e9c8ff;
+  box-shadow: 0 0 14px 3px rgba(179, 107, 210, 0.9);
+  animation: bp-travel 2.8s linear infinite;
+  z-index: 2;
+}
+@keyframes bp-travel {
+  0% { left: 12.5%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: calc(87.5% - 9px); opacity: 0; }
 }
 
 .bp-step {
@@ -293,7 +394,7 @@ function onForgot() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .dot {
@@ -304,59 +405,90 @@ function onForgot() {
 
 .dot.done {
   background: #b36bd2;
+  box-shadow: 0 0 10px rgba(179, 107, 210, 0.8);
 }
 
 .dot.active {
-  background: #fff;
-  border: 2px solid #b36bd2;
+  background: #17091f;
+  border: 2px solid #d9a6ff;
+  box-shadow: 0 0 16px rgba(179, 107, 210, 0.9);
   animation: wp-pulse 1.8s ease-out infinite;
 }
 
 .dot.todo {
-  background: #fff;
-  border: 2px solid #e8e5ef;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.28);
   width: 11px;
   height: 11px;
 }
 
 .step-label {
   font-size: 12px;
-  color: #8a968f;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .step-label.on {
-  color: #8e44ad;
+  color: #d9a6ff;
   font-weight: 600;
 }
 
 @keyframes wp-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(179, 107, 210, 0.4); }
-  70% { box-shadow: 0 0 0 8px rgba(179, 107, 210, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(179, 107, 210, 0.45); }
+  70% { box-shadow: 0 0 0 9px rgba(179, 107, 210, 0); }
   100% { box-shadow: 0 0 0 0 rgba(179, 107, 210, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dot.active { animation: none; }
+  .bp-spark { animation: none; opacity: 0; }
+  .bp-aurora-1, .bp-aurora-2, .bp-aurora-3 { animation: none; }
 }
 
+/* 论点标题：渐变文字 */
 .bp-thesis {
-  margin: 0 0 10px;
-  font-size: 26px;
+  margin: 0 0 12px;
+  font-size: 30px;
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0.5px;
-  color: #303133;
+  background: linear-gradient(120deg, #e9d5ff 0%, #b36bd2 55%, #8e44ad 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .bp-sub {
   margin: 0;
   font-size: 13px;
-  color: var(--wp-muted);
+  color: rgba(255, 255, 255, 0.55);
 }
 
+/* 底部能力玻璃徽章 */
 .bp-foot {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bp-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 12px;
-  color: #b7c4c4;
+}
+
+.bp-cap i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b36bd2;
+  box-shadow: 0 0 8px rgba(179, 107, 210, 0.9);
 }
 
 /* ---- 右侧表单 ---- */
