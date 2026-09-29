@@ -126,12 +126,6 @@ async function onLogin() {
   }
 }
 
-/** 演示账号一键填充。 */
-function fill(demoUsername: string) {
-  form.username = demoUsername
-  form.password = '123456'
-}
-
 function onForgot() {
   ElMessage.info('请联系系统管理员重置密码')
 }
@@ -198,13 +192,6 @@ function onForgot() {
             登 录
           </el-button>
         </el-form>
-
-        <div class="chips">
-          <span class="chip" @click="fill('owner')">业主 · owner</span>
-          <span class="chip" @click="fill('kefu')">客服 · kefu</span>
-          <span class="chip" @click="fill('shifu')">师傅 · shifu</span>
-        </div>
-        <p class="footnote">点一点填入演示账号（密码 123456）· 演示环境 · 账号由管理员开通</p>
 
         <el-dialog
           v-model="captchaDialogVisible"
@@ -476,34 +463,6 @@ function onForgot() {
 }
 .login-btn:hover, .login-btn:focus {
   background: linear-gradient(135deg, #c084d8 0%, #9d55b8 100%);
-}
-
-.chips {
-  display: flex;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.chip {
-  padding: 6px 13px;
-  border-radius: 15px;
-  border: 1px solid #e8e5ef;
-  background: #fff;
-  font-size: 13px;
-  color: #8e44ad;
-  cursor: pointer;
-  transition: border-color 140ms;
-}
-
-.chip:hover {
-  border-color: #b36bd2;
-}
-
-.footnote {
-  margin: 14px 0 0;
-  font-size: 12px;
-  color: var(--wp-muted);
-  text-align: center;
 }
 
 @media (max-width: 900px) {
